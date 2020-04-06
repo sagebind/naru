@@ -1,0 +1,18 @@
+[package]
+name = "aru"
+version = "0.1.0"
+authors = ["Stephen M. Coakley <me@stephencoakley.com>"]
+edition = "2018"
+
+[dependencies]
+ar = "0.8"
+cab = "0.2"
+cpio = "0.2"
+flate2 = "1.0"
+glob = "0.3"
+mpq = "0.7"
+structopt = "0.3"
+tar = "0.4"
+unrar = "0.4"
+xz2 = "0.1.6"
+zip = "0.5"
