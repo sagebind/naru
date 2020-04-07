@@ -7,6 +7,7 @@ use std::{
 use structopt::StructOpt;
 
 mod archive;
+mod compress;
 mod formats;
 mod io;
 

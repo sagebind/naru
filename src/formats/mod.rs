@@ -8,6 +8,7 @@ use std::io::{
     Result as IoResult,
 };
 
+mod tar;
 pub mod zip;
 
 pub trait Format {
