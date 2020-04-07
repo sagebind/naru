@@ -1,4 +1,8 @@
-use std::io::{BufRead, Cursor, Read, Result, Seek, SeekFrom};
+use std::{
+    fs::File,
+    io::{BufRead, Cursor, Read, Result, Seek, SeekFrom},
+    path::Path,
+};
 
 trait ReadSeek: Read + Seek {}
 
@@ -9,6 +13,21 @@ pub struct Input {
 }
 
 impl Input {
+    pub fn open(path: impl AsRef<Path>) -> Result<Self> {
+        let path = path.as_ref();
+
+        if path.to_str() == Some("-") {
+            Ok(Self::stdin())
+        } else {
+            Ok(Self::new(File::open(path)?))
+        }
+    }
+
+    pub fn stdin() -> Self {
+        // TODO: Lock once instead of every read.
+        Self::new(LazyReader::new(std::io::stdin()))
+    }
+
     pub fn new(reader: impl Read + Seek + 'static) -> Self {
         Self {
             inner: Box::new(reader),

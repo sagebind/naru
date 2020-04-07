@@ -1,10 +1,13 @@
+use crate::{
+    archive::ArchiveReader,
+    formats::Format,
+};
 use std::{
-    fs::File,
-    io::{Read, Seek},
     path::{Path, PathBuf},
 };
 use structopt::StructOpt;
 
+mod archive;
 mod formats;
 mod io;
 
@@ -40,24 +43,25 @@ enum Command {
     Update,
 }
 
-fn open(path: impl AsRef<Path>) -> std::io::Result<io::Input> {
-    let path = path.as_ref();
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let options = Options::from_args();
 
-    if path.to_str() == Some("-") {
-        std::io::stdin().lock()
-    } else {
-        Ok(io::Input::new(File::open(path)?))
-    }
-}
-
-fn main() {
-    let opt = Options::from_args();
-    println!("{:?}", opt);
-
-    match opt.command {
+    match options.command {
         Some(Command::List {input}) => {
-            println!("{:?}", input);
+            let input = io::Input::open(input)?;
+            let mut reader = formats::zip::Zip.open(input)?;
+
+            while let Some(entry) = reader.entry() {
+                println!(
+                    "{}  {:>7}  {}",
+                    entry.modified,
+                    size::Size::Bytes(entry.size).to_string(size::Base::Base10, size::Style::Abbreviated),
+                    entry.name.to_string_lossy(),
+                );
+            }
+
+            Ok(())
         }
-        _ => {}
+        _ => Ok(()),
     }
 }
