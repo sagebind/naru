@@ -1,6 +1,6 @@
 use crate::{
     archive::{ArchiveReader, Entry, EntryType},
-    io::Input,
+    input::Input,
     formats::Format,
 };
 use chrono::naive::{NaiveDate, NaiveDateTime, NaiveTime};

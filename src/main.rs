@@ -1,6 +1,7 @@
 use indicatif::ProgressBar;
 use std::{
     fmt,
+    io::BufRead,
     path::PathBuf,
 };
 use structopt::StructOpt;
@@ -8,6 +9,7 @@ use structopt::StructOpt;
 mod archive;
 mod compress;
 mod formats;
+mod input;
 mod io;
 
 #[derive(Debug, StructOpt)]
@@ -69,8 +71,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 None => std::env::current_dir()?,
             };
 
-            if let Some(format) = formats::detect_extension(&input) {
-                let input = io::Input::open(input)?;
+            if let Some(format) = formats::for_extension(&input) {
+                let input = input::Input::open(input)?;
                 let mut reader = format.open(input)?;
 
                 let progress_bar = match reader.len() {
@@ -93,9 +95,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         Some(Command::List {input}) => {
-            if let Some(format) = formats::detect_extension(&input) {
-                let input = io::Input::open(input)?;
-                let mut reader = format.open(input)?;
+            let mut input_file = input::Input::open(&input)?;
+
+            if let Some(format) = formats::for_bytes(input_file.fill_buf()?) {
+                let mut reader = format.open(input_file)?;
 
                 while let Some(entry) = reader.entry()? {
                     println!(

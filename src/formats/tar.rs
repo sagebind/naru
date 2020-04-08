@@ -7,14 +7,14 @@
 
 use crate::{
     archive::{ArchiveReader, Entry, EntryType},
-    io::Input,
+    input::Input,
 };
 use chrono::naive::NaiveDateTime;
+use owning_ref::OwningHandle;
 use std::{
     io::{Read, Result},
     path::Path,
 };
-use tar::{Archive, Entries};
 
 /// Format provider for tar.
 pub struct Tar;
@@ -38,16 +38,16 @@ pub struct TarReader<'r, R: Read + 'r> {
     ///
     /// This is an owning ref handle, because the only iterator type offered by
     /// the tar library is a mutably borrowing one.
-    entries: owning_ref::OwningHandle<Box<Archive<R>>, Box<Entries<'r, R>>>,
+    entries: OwningHandle<Box<tar::Archive<R>>, Box<tar::Entries<'r, R>>>,
 }
 
 impl<'r, R: Read + 'r> TarReader<'r, R> {
     fn new(reader: R) -> Result<Self> {
         Ok(Self {
-            entries: owning_ref::OwningHandle::try_new(
-                Box::new(Archive::new(reader)),
+            entries: OwningHandle::try_new(
+                Box::new(tar::Archive::new(reader)),
                 |archive| unsafe {
-                    let archive = &mut *(archive as *mut Archive<R>);
+                    let archive = &mut *(archive as *mut tar::Archive<R>);
                     archive.entries().map(Box::new)
                 },
             )?,
