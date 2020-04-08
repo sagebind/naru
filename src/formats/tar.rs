@@ -1,4 +1,14 @@
-use crate::archive::{ArchiveReader, Entry, EntryType};
+//! Implementation of the [tar archive] format.
+//!
+//! This module only handles the tar format itself, it does not handle
+//! compression wrapping.
+//!
+//! [TAR archive]: https://en.wikipedia.org/wiki/Tar_%28computing%29
+
+use crate::{
+    archive::{ArchiveReader, Entry, EntryType},
+    io::Input,
+};
 use chrono::naive::NaiveDateTime;
 use std::{
     io::{Read, Result},
@@ -6,19 +16,41 @@ use std::{
 };
 use tar::{Archive, Entries};
 
+/// Format provider for tar.
+pub struct Tar;
+
+impl super::Format for Tar {
+    fn file_extensions(&self) -> &[&str] {
+        &["tar"]
+    }
+
+    fn match_bytes(&self, bytes: &[u8]) -> bool {
+        infer::archive::is_tar(bytes)
+    }
+
+    fn open(&self, input: Input) -> Result<Box<dyn ArchiveReader>> {
+        Ok(Box::new(TarReader::new(input)?))
+    }
+}
+
 pub struct TarReader<'r, R: Read + 'r> {
-    archive: Archive<R>,
-    entries: Entries<'r, R>,
+    /// An iterator over the entries of a TAR archive.
+    ///
+    /// This is an owning ref handle, because the only iterator type offered by
+    /// the tar library is a mutably borrowing one.
+    entries: owning_ref::OwningHandle<Box<Archive<R>>, Box<Entries<'r, R>>>,
 }
 
 impl<'r, R: Read + 'r> TarReader<'r, R> {
     fn new(reader: R) -> Result<Self> {
-        let mut archive = Archive::new(reader);
-        let entries = archive.entries()?;
-
         Ok(Self {
-            archive,
-            entries,
+            entries: owning_ref::OwningHandle::try_new(
+                Box::new(Archive::new(reader)),
+                |archive| unsafe {
+                    let archive = &mut *(archive as *mut Archive<R>);
+                    archive.entries().map(Box::new)
+                },
+            )?,
         })
     }
 }

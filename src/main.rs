@@ -1,4 +1,3 @@
-use crate::formats::Format;
 use indicatif::ProgressBar;
 use std::{
     fmt,
@@ -70,36 +69,44 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 None => std::env::current_dir()?,
             };
 
-            let input = io::Input::open(input)?;
-            let mut reader = formats::zip::Zip.open(input)?;
+            if let Some(format) = formats::detect_extension(&input) {
+                let input = io::Input::open(input)?;
+                let mut reader = format.open(input)?;
 
-            let progress_bar = match reader.len() {
-                Some(len) => ProgressBar::new(len),
-                None => ProgressBar::new_spinner(),
-            };
+                let progress_bar = match reader.len() {
+                    Some(len) => ProgressBar::new(len),
+                    None => ProgressBar::new_spinner(),
+                };
 
-            while let Some(mut entry) = reader.entry()? {
-                progress_bar.set_message(&entry.path().to_string_lossy());
-                entry.extract(&dest)?;
-                progress_bar.inc(1);
+                while let Some(mut entry) = reader.entry()? {
+                    progress_bar.set_message(&entry.path().to_string_lossy());
+                    entry.extract(&dest)?;
+                    progress_bar.inc(1);
+                }
+
+                progress_bar.finish();
+            } else {
+                eprintln!("Unknown format: {}", input.display());
             }
-
-            progress_bar.finish();
 
             Ok(())
         }
 
         Some(Command::List {input}) => {
-            let input = io::Input::open(input)?;
-            let mut reader = formats::zip::Zip.open(input)?;
+            if let Some(format) = formats::detect_extension(&input) {
+                let input = io::Input::open(input)?;
+                let mut reader = format.open(input)?;
 
-            while let Some(entry) = reader.entry()? {
-                println!(
-                    "{:>19}  {:>7}  {}",
-                    EmptyFormat(entry.modified()),
-                    size::Size::Bytes(entry.size()).to_string(size::Base::Base10, size::Style::Abbreviated),
-                    entry.path().display(),
-                );
+                while let Some(entry) = reader.entry()? {
+                    println!(
+                        "{:>19}  {:>7}  {}",
+                        EmptyFormat(entry.modified()),
+                        size::Size::Bytes(entry.size()).to_string(size::Base::Base10, size::Style::Abbreviated),
+                        entry.path().display(),
+                    );
+                }
+            } else {
+                eprintln!("Unknown format: {}", input.display());
             }
 
             Ok(())

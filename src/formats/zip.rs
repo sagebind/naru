@@ -16,8 +16,12 @@ use zip::{
 pub struct Zip;
 
 impl Format for Zip {
-    fn detect(reader: &mut impl Read) -> bool {
-        false
+    fn file_extensions(&self) -> &[&str] {
+        &["jar", "zip"]
+    }
+
+    fn match_bytes(&self, bytes: &[u8]) -> bool {
+        infer::archive::is_zip(bytes)
     }
 
     fn open(&self, input: Input) -> std::io::Result<Box<dyn ArchiveReader>> {
