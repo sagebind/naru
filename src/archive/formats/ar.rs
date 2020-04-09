@@ -24,7 +24,9 @@ impl super::Format for Ar {
     fn match_bytes(&self, bytes: &[u8]) -> bool {
         infer::archive::is_ar(bytes)
     }
+}
 
+impl super::ArchiveFormat for Ar {
     fn open(&self, input: Input) -> Result<Box<dyn ArchiveReader>> {
         Ok(Box::new(ArReader::new(input)))
     }

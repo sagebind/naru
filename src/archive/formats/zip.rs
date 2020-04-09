@@ -1,7 +1,6 @@
 use crate::{
     archive::{ArchiveReader, Entry, EntryType},
     input::Input,
-    formats::Format,
 };
 use chrono::naive::{NaiveDate, NaiveDateTime, NaiveTime};
 use std::{
@@ -15,7 +14,7 @@ use zip::{
 
 pub struct Zip;
 
-impl Format for Zip {
+impl super::Format for Zip {
     fn file_extensions(&self) -> &[&str] {
         &["jar", "zip"]
     }
@@ -23,7 +22,9 @@ impl Format for Zip {
     fn match_bytes(&self, bytes: &[u8]) -> bool {
         infer::archive::is_zip(bytes)
     }
+}
 
+impl super::ArchiveFormat for Zip {
     fn open(&self, input: Input) -> std::io::Result<Box<dyn ArchiveReader>> {
         Ok(Box::new(ZipReader::open(input)?))
     }

@@ -8,9 +8,8 @@ use structopt::StructOpt;
 
 mod archive;
 mod compress;
-mod formats;
+mod format;
 mod input;
-mod io;
 
 #[derive(Debug, StructOpt)]
 struct Options {
@@ -71,10 +70,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 None => std::env::current_dir()?,
             };
 
-            if let Some(format) = formats::for_extension(&input) {
-                let input = input::Input::open(input)?;
-                let mut reader = format.open(input)?;
+            let input_file = input::Input::open(&input)?;
 
+            if let Some(mut reader) = archive::open(input_file)? {
                 let progress_bar = match reader.len() {
                     Some(len) => ProgressBar::new(len),
                     None => ProgressBar::new_spinner(),
@@ -95,11 +93,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         Some(Command::List {input}) => {
-            let mut input_file = input::Input::open(&input)?;
+            let input_file = input::Input::open(&input)?;
 
-            if let Some(format) = formats::for_bytes(input_file.fill_buf()?) {
-                let mut reader = format.open(input_file)?;
-
+            if let Some(mut reader) = archive::open(input_file)? {
                 while let Some(entry) = reader.entry()? {
                     println!(
                         "{:>19}  {:>7}  {}",

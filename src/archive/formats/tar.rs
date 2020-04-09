@@ -27,7 +27,9 @@ impl super::Format for Tar {
     fn match_bytes(&self, bytes: &[u8]) -> bool {
         infer::archive::is_tar(bytes)
     }
+}
 
+impl super::ArchiveFormat for Tar {
     fn open(&self, input: Input) -> Result<Box<dyn ArchiveReader>> {
         Ok(Box::new(TarReader::new(input)?))
     }
