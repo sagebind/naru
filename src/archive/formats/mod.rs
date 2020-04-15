@@ -2,6 +2,7 @@ use crate::{
     archive::ArchiveReader,
     format::Format,
     input::Input,
+    output::Output,
 };
 use std::{
     io::{Result, Write},
@@ -24,7 +25,7 @@ pub trait ArchiveFormat: Format {
     fn open(&self, input: Input) -> Result<Box<dyn ArchiveReader>>;
 
     /// Create a writer for writing an archive to a stream.
-    fn create<'w>(&self, sink: &'w mut dyn Write) -> Result<Box<dyn super::ArchiveWriter + 'w>> {
+    fn create<'w>(&self, sink: &'w mut Output) -> Result<Box<dyn super::ArchiveWriter + 'w>> {
         unimplemented!() // TODO: return equivalent error
     }
 }

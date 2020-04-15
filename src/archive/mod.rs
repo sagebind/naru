@@ -1,6 +1,9 @@
 //! Archive format APIs for reading and writing.
 
-use crate::input::Input;
+use crate::{
+    input::Input,
+    output::Output,
+};
 use std::io::{BufRead, Result};
 
 mod formats;
@@ -18,4 +21,14 @@ pub fn open(mut input: Input) -> Result<Option<Box<dyn ArchiveReader>>> {
     } else {
         Ok(None)
     }
+}
+
+pub fn create<'o>(output: &'o mut Output) -> Result<Option<Box<dyn ArchiveWriter + 'o>>> {
+    if let Some(path) = output.path() {
+        if let Some(format) = formats::for_extension(path) {
+            return Ok(Some(format.create(output)?));
+        }
+    }
+
+    Ok(None)
 }
