@@ -4,7 +4,7 @@ use crate::{
     input::Input,
 };
 use std::{
-    io::Result,
+    io::{Result, Write},
     path::Path,
 };
 
@@ -22,6 +22,11 @@ const ARCHIVE_FORMATS: &[&dyn ArchiveFormat] = &[
 pub trait ArchiveFormat: Format {
     /// Open the given input for reading.
     fn open(&self, input: Input) -> Result<Box<dyn ArchiveReader>>;
+
+    /// Create a writer for writing an archive to a stream.
+    fn create<'w>(&self, sink: &'w mut dyn Write) -> Result<Box<dyn super::ArchiveWriter + 'w>> {
+        unimplemented!() // TODO: return equivalent error
+    }
 }
 
 /// Get an appropriate archive format provider for a file beginning with the given

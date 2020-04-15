@@ -1,12 +1,20 @@
+use crate::buffers::DiskCacheReader;
 use std::{
     fs::File,
     io::{self, BufRead, BufReader, Read, Result, Seek, SeekFrom},
-    path::Path,
+    path::{Path, PathBuf},
     mem::ManuallyDrop,
 };
 
-/// An input stream that might be seekable.
-pub struct Input(BufReader<File>);
+/// An input stream that might be seekable and might have a file path.
+///
+/// This type is used to abstract over multiple kinds of file sources.
+pub struct Input(Inner);
+
+enum Inner {
+    Direct(BufReader<File>, Option<PathBuf>),
+    Cached(BufReader<DiskCacheReader<BufReader<File>>>),
+}
 
 impl Input {
     pub fn open(path: impl AsRef<Path>) -> Result<Self> {
@@ -15,66 +23,90 @@ impl Input {
         if path.to_str() == Some("-") {
             Self::stdin()
         } else {
-            Ok(Self::from(File::open(path)?))
+            Ok(Self(Inner::Direct(
+                BufReader::new(File::open(path)?),
+                Some(path.to_owned()),
+            )))
         }
     }
 
-    #[cfg(unix)]
     pub fn stdin() -> Result<Self> {
-        use std::os::unix::io::*;
+        #[cfg(unix)]
+        fn get_file() -> Result<File> {
+            use std::os::unix::io::*;
 
-        unsafe fn dup(fd: RawFd) -> Result<File> {
-            Ok(ManuallyDrop::new(File::from_raw_fd(fd)).try_clone()?)
+            let fd = io::stdin().as_raw_fd();
+
+            Ok(ManuallyDrop::new(unsafe {
+                File::from_raw_fd(fd)
+            }).try_clone()?)
         }
 
-        unsafe {
-            Ok(Self::from(dup(io::stdin().as_raw_fd())?))
+        #[cfg(windows)]
+        fn get_file() -> Result<File> {
+            use std::os::windows::io::*;
+
+            let handle = io::stdin().as_raw_handle();
+
+            Ok(ManuallyDrop::new(unsafe {
+                File::from_raw_handle(handle)
+            }).try_clone()?)
+        }
+
+        let mut file = get_file()?;
+
+        // If stdin is actually a seekable file stream, then just use as-is.
+        if file.seek(SeekFrom::Start(0)).is_ok() {
+            Ok(Self(Inner::Direct(
+                BufReader::new(file),
+                None,
+            )))
+        }
+        // If stdin is a true unseekable stream (like a pipe) then wrap in a
+        // caching reader.
+        else {
+            Ok(Self(Inner::Cached(BufReader::new(DiskCacheReader::new(BufReader::new(file))?))))
         }
     }
 
-    #[cfg(windows)]
-    pub fn stdin() -> Result<Self> {
-        use std::os::windows::io::*;
-
-        unsafe fn dup(handle: RawHandle) -> Result<File> {
-            Ok(ManuallyDrop::new(File::from_raw_handle(handle)).try_clone()?)
+    pub fn path(&self) -> Option<&Path> {
+        match &self.0 {
+            Inner::Direct(_, path) => path.as_deref(),
+            _ => None,
         }
-
-        unsafe {
-            Ok(Self::from(dup(io::stdin().as_raw_handle())?))
-        }
-    }
-
-    /// Check if this input is actually seekable.
-    pub fn is_seekable(&mut self) -> bool {
-        self.0.seek(SeekFrom::Current(0)).is_ok()
-    }
-}
-
-impl From<File> for Input {
-    fn from(file: File) -> Self {
-        Self(BufReader::new(file))
     }
 }
 
 impl BufRead for Input {
     fn fill_buf(&mut self) -> Result<&[u8]> {
-        self.0.fill_buf()
+        match &mut self.0 {
+            Inner::Direct(reader, _) => reader.fill_buf(),
+            Inner::Cached(reader) => reader.fill_buf(),
+        }
     }
 
     fn consume(&mut self, amt: usize) {
-        self.0.consume(amt);
+        match &mut self.0 {
+            Inner::Direct(reader, _) => reader.consume(amt),
+            Inner::Cached(reader) => reader.consume(amt),
+        }
     }
 }
 
 impl Read for Input {
     fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
-        self.0.read(buf)
+        match &mut self.0 {
+            Inner::Direct(reader, _) => reader.read(buf),
+            Inner::Cached(reader) => reader.read(buf),
+        }
     }
 }
 
 impl Seek for Input {
     fn seek(&mut self, pos: SeekFrom) -> Result<u64> {
-        self.0.seek(pos)
+        match &mut self.0 {
+            Inner::Direct(reader, _) => reader.seek(pos),
+            Inner::Cached(reader) => reader.seek(pos),
+        }
     }
 }

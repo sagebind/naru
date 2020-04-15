@@ -1,12 +1,14 @@
 use indicatif::ProgressBar;
 use std::{
     fmt,
+    fs,
     io::BufRead,
     path::PathBuf,
 };
 use structopt::StructOpt;
 
 mod archive;
+mod buffers;
 mod compress;
 mod format;
 mod input;
@@ -65,14 +67,28 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match options.command {
         Some(Command::Extract {input, dest}) => {
+            let input = input::Input::open(&input)?;
+
             let dest = match dest {
                 Some(path) => path,
-                None => std::env::current_dir()?,
+
+                // If no destination path was given, assume one based on the
+                // name of the input file.
+                None => {
+                    let mut path = std::env::current_dir()?;
+
+                    if let Some(input_path) = input.path() {
+                        if let Some(archive_file_name) = input_path.file_stem() {
+                            path = path.join(archive_file_name);
+                            fs::create_dir(&path)?;
+                        }
+                    }
+
+                    path
+                },
             };
 
-            let input_file = input::Input::open(&input)?;
-
-            if let Some(mut reader) = archive::open(input_file)? {
+            if let Some(mut reader) = archive::open(input)? {
                 let progress_bar = match reader.len() {
                     Some(len) => ProgressBar::new(len),
                     None => ProgressBar::new_spinner(),
@@ -86,7 +102,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 progress_bar.finish();
             } else {
-                eprintln!("Unknown format: {}", input.display());
+                eprintln!("Unknown format");
             }
 
             Ok(())
