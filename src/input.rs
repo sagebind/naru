@@ -1,5 +1,6 @@
 use crate::buffers::DiskCacheReader;
 use std::{
+    convert::TryFrom,
     fs::File,
     io::{self, BufRead, BufReader, Read, Result, Seek, SeekFrom},
     path::{Path, PathBuf},
@@ -73,6 +74,17 @@ impl Input {
         match &self.0 {
             Inner::Direct(_, path) => path.as_deref(),
             _ => None,
+        }
+    }
+}
+
+impl TryFrom<Input> for File {
+    type Error = Input;
+
+    fn try_from(input: Input) -> std::result::Result<File, Input> {
+        match input.0 {
+            Inner::Direct(reader, _) => Ok(reader.into_inner()),
+            _ => Err(input),
         }
     }
 }

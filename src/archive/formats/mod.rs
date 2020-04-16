@@ -10,11 +10,13 @@ use std::{
 };
 
 mod ar;
+mod fat;
 mod tar;
 mod zip;
 
 const ARCHIVE_FORMATS: &[&dyn ArchiveFormat] = &[
     &ar::Ar,
+    &fat::Fat,
     &tar::Tar,
     &zip::Zip,
 ];
