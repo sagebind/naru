@@ -4,7 +4,11 @@ use crate::{
     input::Input,
     output::Output,
 };
-use std::io::{BufRead, Result};
+use chrono::prelude::*;
+use std::{
+    fs,
+    io::{BufRead, Result},
+};
 
 mod formats;
 mod read;
@@ -14,6 +18,19 @@ pub use self::{
     read::*,
     write::*,
 };
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct Metadata {
+    last_modified: Option<DateTime<Local>>,
+}
+
+impl From<fs::Metadata> for Metadata {
+    fn from(metadata: fs::Metadata) -> Self {
+        Self {
+            last_modified: metadata.modified().ok().map(From::from),
+        }
+    }
+}
 
 pub fn open(mut input: Input) -> Result<Option<Box<dyn ArchiveReader>>> {
     if let Some(format) = formats::for_bytes(input.fill_buf()?) {

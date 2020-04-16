@@ -1,7 +1,7 @@
 use crate::buffers::DiskCacheWriter;
 use std::{
     fs::File,
-    io::{self, BufRead, BufReader, BufWriter, Read, Result, Seek, SeekFrom, Write},
+    io::{self, BufWriter, Result, Seek, SeekFrom, Write},
     path::{Path, PathBuf},
     mem::ManuallyDrop,
 };

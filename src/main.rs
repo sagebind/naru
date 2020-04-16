@@ -2,8 +2,7 @@ use indicatif::ProgressBar;
 use std::{
     fmt,
     fs,
-    io::BufRead,
-    path::{Path, PathBuf},
+    path::PathBuf,
 };
 use structopt::StructOpt;
 use walkdir::WalkDir;
@@ -109,10 +108,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                     progress_bar.set_message(&path.to_string_lossy());
 
+                    let metadata = entry.metadata()
+                        .map(Into::into)
+                        .unwrap_or_default();
+
                     if entry.file_type().is_dir() {
-                        writer.add_directory(path)?;
+                        writer.add_directory(path, metadata)?;
                     } else {
-                        writer.add_file(path, &mut fs::File::open(path)?)?;
+                        writer.add_file(path, metadata, &mut fs::File::open(path)?)?;
                     }
 
                     progress_bar.inc(1);

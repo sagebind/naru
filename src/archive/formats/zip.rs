@@ -1,12 +1,13 @@
 use crate::{
-    archive::{ArchiveReader, ArchiveWriter, Entry, EntryType},
+    archive::{ArchiveReader, ArchiveWriter, Entry, EntryType, Metadata},
     input::Input,
     output::Output,
 };
+use chrono::prelude::*;
 use chrono::naive::{NaiveDate, NaiveDateTime, NaiveTime};
 use std::{
     io::{copy, Read, Result, Seek, Write},
-    path::{Path, PathBuf},
+    path::Path,
 };
 use zip::{
     read::{ZipArchive, ZipFile},
@@ -119,22 +120,16 @@ impl<'a> Read for ZipEntry<'a> {
 }
 
 impl<W: Write + Seek> ArchiveWriter for ZipWriter<W> {
-    fn add_file(&mut self, path: &Path, file: &mut dyn Read) -> Result<()> {
-        let options = zip::write::FileOptions::default()
-            .compression_method(DEFAULT_COMPRESSION_METHOD);
-
-        // TODO: Handle encoding better.
-        self.start_file(path.to_string_lossy(), options)?;
-        copy(file, self)?;
+    fn add_directory(&mut self, path: &Path, metadata: Metadata) -> Result<()> {
+        self.add_directory_from_path(path, create_file_options(metadata))?;
 
         Ok(())
     }
 
-    fn add_directory(&mut self, path: &Path) -> Result<()> {
-        let options = zip::write::FileOptions::default()
-            .compression_method(DEFAULT_COMPRESSION_METHOD);
-
-        self.add_directory_from_path(path, options)?;
+    fn add_file(&mut self, path: &Path, metadata: Metadata, file: &mut dyn Read) -> Result<()> {
+        // TODO: Handle encoding better.
+        self.start_file(path.to_string_lossy(), create_file_options(metadata))?;
+        copy(file, self)?;
 
         Ok(())
     }
@@ -142,6 +137,26 @@ impl<W: Write + Seek> ArchiveWriter for ZipWriter<W> {
     fn finish(&mut self) -> Result<()> {
         self.finish().map(|_| ()).map_err(convert_err)
     }
+}
+
+fn create_file_options(metadata: Metadata) -> zip::write::FileOptions {
+    let mut options = zip::write::FileOptions::default()
+    .compression_method(DEFAULT_COMPRESSION_METHOD);
+
+    if let Some(datetime) = metadata.last_modified {
+        if let Ok(datetime) = zip::DateTime::from_date_and_time(
+            datetime.year() as u16,
+            datetime.month() as u8,
+            datetime.day() as u8,
+            datetime.hour() as u8,
+            datetime.minute() as u8,
+            datetime.second() as u8,
+        ) {
+            options = options.last_modified_time(datetime);
+        }
+    }
+
+    options
 }
 
 fn convert_err(error: ZipError) -> std::io::Error {
