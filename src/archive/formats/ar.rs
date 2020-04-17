@@ -9,6 +9,7 @@ use crate::{
 use chrono::naive::NaiveDateTime;
 use std::{
     borrow::Cow,
+    fmt,
     io::{Read, Result, Seek},
     path::{Path, PathBuf},
 };
@@ -17,12 +18,22 @@ use std::{
 pub struct Ar;
 
 impl super::Format for Ar {
+    fn id(&self) -> &str {
+        "ar"
+    }
+
     fn file_extensions(&self) -> &[&str] {
         &["a", "ar", "deb", "lib"]
     }
 
     fn match_bytes(&self, bytes: &[u8]) -> bool {
         infer::archive::is_ar(bytes)
+    }
+}
+
+impl fmt::Display for Ar {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("ar")
     }
 }
 

@@ -7,6 +7,7 @@ use crate::{
 use owning_ref::OwningHandle;
 use std::{
     convert::TryInto,
+    fmt,
     fs::File,
     io::{Read, Result, Seek, SeekFrom},
     path::{Path, PathBuf},
@@ -15,8 +16,18 @@ use std::{
 pub struct Fat;
 
 impl super::Format for Fat {
+    fn id(&self) -> &str {
+        "fat"
+    }
+
     fn match_bytes(&self, bytes: &[u8]) -> bool {
         matches!(bytes, [0xEB, 0x3C, 0x90, ..])
+    }
+}
+
+impl fmt::Display for Fat {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("FAT")
     }
 }
 

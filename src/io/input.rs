@@ -1,10 +1,12 @@
-use crate::buffers::DiskCacheReader;
+use super::{
+    Dup,
+    buffers::DiskCacheReader,
+};
 use std::{
     convert::TryFrom,
     fs::File,
     io::{self, BufRead, BufReader, Read, Result, Seek, SeekFrom},
     path::{Path, PathBuf},
-    mem::ManuallyDrop,
 };
 
 /// An input stream that might be seekable and might have a file path.
@@ -32,29 +34,7 @@ impl Input {
     }
 
     pub fn stdin() -> Result<Self> {
-        #[cfg(unix)]
-        fn get_file() -> Result<File> {
-            use std::os::unix::io::*;
-
-            let fd = io::stdin().as_raw_fd();
-
-            Ok(ManuallyDrop::new(unsafe {
-                File::from_raw_fd(fd)
-            }).try_clone()?)
-        }
-
-        #[cfg(windows)]
-        fn get_file() -> Result<File> {
-            use std::os::windows::io::*;
-
-            let handle = io::stdin().as_raw_handle();
-
-            Ok(ManuallyDrop::new(unsafe {
-                File::from_raw_handle(handle)
-            }).try_clone()?)
-        }
-
-        let mut file = get_file()?;
+        let mut file = io::stdin().dup()?;
 
         // If stdin is actually a seekable file stream, then just use as-is.
         if file.seek(SeekFrom::Start(0)).is_ok() {

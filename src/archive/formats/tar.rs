@@ -12,6 +12,7 @@ use crate::{
 use chrono::naive::NaiveDateTime;
 use owning_ref::OwningHandle;
 use std::{
+    fmt,
     io::{Read, Result},
     path::Path,
 };
@@ -20,12 +21,22 @@ use std::{
 pub struct Tar;
 
 impl super::Format for Tar {
+    fn id(&self) -> &str {
+        "tar"
+    }
+
     fn file_extensions(&self) -> &[&str] {
         &["tar"]
     }
 
     fn match_bytes(&self, bytes: &[u8]) -> bool {
         infer::archive::is_tar(bytes)
+    }
+}
+
+impl fmt::Display for Tar {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("tar")
     }
 }
 

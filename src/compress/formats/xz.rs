@@ -4,17 +4,27 @@ use crate::{
     format::Format,
     input::Input,
 };
-use std::io::{Read, Result};
+use std::{fmt, io::{Read, Result}};
 
 pub struct Xz;
 
 impl Format for Xz {
+    fn id(&self) -> &str {
+        "xz"
+    }
+
     fn file_extensions(&self) -> &[&str] {
         &["xz"]
     }
 
     fn match_bytes(&self, bytes: &[u8]) -> bool {
         infer::archive::is_xz(bytes)
+    }
+}
+
+impl fmt::Display for Xz {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("xz")
     }
 }
 

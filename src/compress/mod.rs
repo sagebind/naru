@@ -6,7 +6,7 @@
 use flate2::bufread::GzDecoder;
 use std::io::{BufRead, Read};
 
-mod formats;
+pub mod formats;
 
 pub fn create_decompressor<'r, R: BufRead + Read + 'r>(magic: &[u8], reader: R) -> Box<dyn Read + 'r> {
     if infer::archive::is_gz(magic) {

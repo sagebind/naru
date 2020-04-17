@@ -6,17 +6,27 @@ use crate::{
     format::Format,
     input::Input,
 };
-use std::io::{Read, Result};
+use std::{fmt, io::{Read, Result}};
 
 pub struct Zlib;
 
 impl Format for Zlib {
+    fn id(&self) -> &str {
+        "zlib"
+    }
+
     fn file_extensions(&self) -> &[&str] {
         &["zz"]
     }
 
     fn match_bytes(&self, bytes: &[u8]) -> bool {
         matches!(bytes, [0x78, 0x01, ..] | [0x78, 0x5E, ..] | [0x78, 0x9C, ..] | [0x78, 0xDA, ..])
+    }
+}
+
+impl fmt::Display for Zlib {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("ZLIB")
     }
 }
 

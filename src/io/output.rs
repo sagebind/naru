@@ -1,9 +1,11 @@
-use crate::buffers::DiskCacheWriter;
+use super::{
+    Dup,
+    buffers::DiskCacheWriter,
+};
 use std::{
     fs::File,
     io::{self, BufWriter, Result, Seek, SeekFrom, Write},
     path::{Path, PathBuf},
-    mem::ManuallyDrop,
 };
 
 pub struct Output(Inner);
@@ -28,29 +30,7 @@ impl Output {
     }
 
     pub fn stdout() -> Result<Self> {
-        #[cfg(unix)]
-        fn get_file() -> Result<File> {
-            use std::os::unix::io::*;
-
-            let fd = io::stdout().as_raw_fd();
-
-            Ok(ManuallyDrop::new(unsafe {
-                File::from_raw_fd(fd)
-            }).try_clone()?)
-        }
-
-        #[cfg(windows)]
-        fn get_file() -> Result<File> {
-            use std::os::windows::io::*;
-
-            let handle = io::stdout().as_raw_handle();
-
-            Ok(ManuallyDrop::new(unsafe {
-                File::from_raw_handle(handle)
-            }).try_clone()?)
-        }
-
-        let mut file = get_file()?;
+        let mut file = io::stdout().dup()?;
 
         // If stdout is actually a seekable file stream, then just use as-is.
         if file.seek(SeekFrom::Start(0)).is_ok() {

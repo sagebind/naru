@@ -10,7 +10,7 @@ use std::{
     io::{BufRead, Result},
 };
 
-mod formats;
+pub mod formats;
 mod read;
 mod write;
 

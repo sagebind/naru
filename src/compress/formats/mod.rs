@@ -14,3 +14,15 @@ mod zlib;
 pub trait CompressionFormat: Format {
     fn new_encoder(&self, input: Input) -> Result<Box<dyn Read>>;
 }
+
+/// Get all enabled formats.
+pub fn all() -> &'static [&'static dyn CompressionFormat] {
+    &[
+        &bzip2::Bzip2,
+        &compress::Compress,
+        &gzip::Gzip,
+        &lzip::Lzip,
+        &xz::Xz,
+        &zlib::Zlib,
+    ]
+}

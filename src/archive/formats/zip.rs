@@ -1,3 +1,7 @@
+//! The common ZIP file format.
+//!
+//! https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT
+
 use crate::{
     archive::{ArchiveReader, ArchiveWriter, Entry, EntryType, Metadata},
     input::Input,
@@ -6,6 +10,7 @@ use crate::{
 use chrono::prelude::*;
 use chrono::naive::{NaiveDate, NaiveDateTime, NaiveTime};
 use std::{
+    fmt,
     io::{copy, Read, Result, Seek, Write},
     path::Path,
 };
@@ -20,12 +25,22 @@ const DEFAULT_COMPRESSION_METHOD: zip::CompressionMethod = zip::CompressionMetho
 pub struct Zip;
 
 impl super::Format for Zip {
+    fn id(&self) -> &str {
+        "zip"
+    }
+
     fn file_extensions(&self) -> &[&str] {
         &["jar", "zip"]
     }
 
     fn match_bytes(&self, bytes: &[u8]) -> bool {
         infer::archive::is_zip(bytes)
+    }
+}
+
+impl fmt::Display for Zip {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("ZIP")
     }
 }
 

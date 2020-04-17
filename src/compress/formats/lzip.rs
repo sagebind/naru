@@ -5,17 +5,27 @@ use crate::{
     format::Format,
     input::Input,
 };
-use std::io::{Read, Result};
+use std::{fmt, io::{Read, Result}};
 
 pub struct Lzip;
 
 impl Format for Lzip {
+    fn id(&self) -> &str {
+        "lzip"
+    }
+
     fn file_extensions(&self) -> &[&str] {
         &["lz"]
     }
 
     fn match_bytes(&self, bytes: &[u8]) -> bool {
         infer::archive::is_lz(bytes)
+    }
+}
+
+impl fmt::Display for Lzip {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("Lzip")
     }
 }
 

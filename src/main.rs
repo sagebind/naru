@@ -8,11 +8,11 @@ use structopt::StructOpt;
 use walkdir::WalkDir;
 
 mod archive;
-mod buffers;
 mod compress;
 mod format;
-mod input;
-mod output;
+mod io;
+
+pub use io::*;
 
 #[derive(Debug, StructOpt)]
 struct Options {
@@ -22,6 +22,9 @@ struct Options {
 
 #[derive(Debug, StructOpt)]
 enum Command {
+    /// Show information about supported formats
+    Formats,
+
     #[structopt(visible_alias = "a")]
     Add,
 
@@ -89,10 +92,28 @@ fn collect_paths(paths: &[PathBuf]) -> Result<Vec<walkdir::DirEntry>, Box<dyn st
         .collect()
 }
 
+fn show_formats() -> Result<(), Box<dyn std::error::Error>> {
+    println!("Archive formats:");
+
+    for format in archive::formats::all() {
+        println!("  {}", format);
+    }
+
+    println!("Compression stream formats:");
+
+    for format in compress::formats::all() {
+        println!("  {}", format);
+    }
+
+    Ok(())
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let options = Options::from_args();
 
     match options.command {
+        Some(Command::Formats) => show_formats(),
+
         Some(Command::Create {output, files}) => {
             let mut output = output::Output::create(&output)?;
 

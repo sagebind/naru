@@ -6,17 +6,27 @@ use crate::{
     format::Format,
     input::Input,
 };
-use std::io::{Read, Result};
+use std::{fmt, io::{Read, Result}};
 
 pub struct Gzip;
 
 impl Format for Gzip {
+    fn id(&self) -> &str {
+        "gzip"
+    }
+
     fn file_extensions(&self) -> &[&str] {
         &["gz"]
     }
 
     fn match_bytes(&self, bytes: &[u8]) -> bool {
         infer::archive::is_gz(bytes)
+    }
+}
+
+impl fmt::Display for Gzip {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("GZIP")
     }
 }
 
