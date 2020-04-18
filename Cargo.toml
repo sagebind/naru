@@ -1,7 +1,13 @@
 [package]
-name = "aru"
+name = "naru"
 version = "0.1.0"
+description = "Cross platform, intuitive file archiver command."
 authors = ["Stephen M. Coakley <me@stephencoakley.com>"]
+license = "MIT"
+keywords = ["archive", "zip"]
+categories = ["command-line-utilities"]
+repository = "https://github.com/sagebind/naru"
+readme = "README.md"
 edition = "2018"
 
 [dependencies]
