@@ -24,9 +24,10 @@ jobs:
 
       - name: Optimize and package binary
         run: |
-          strip target/x86_64-unknown-linux-musl/release/naru
-          chmod +x target/x86_64-unknown-linux-musl/release/naru
-          tar -c target/x86_64-unknown-linux-musl/release/naru | gzip > target/x86_64-unknown-linux-musl/release/naru.tar.gz
+          cd target/x86_64-unknown-linux-musl/release
+          strip naru
+          chmod +x naru
+          tar -c naru | gzip > naru.tar.gz
 
       - name: Upload binary
         uses: actions/upload-release-asset@v1
@@ -35,4 +36,67 @@ jobs:
         with:
           asset_name: naru-linux-x86_64.tar.gz
           asset_path: target/x86_64-unknown-linux-musl/release/naru.tar.gz
+          upload_url: ${{ github.event.release.upload_url }}
+
+  macos-x86_64:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v1
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          default: true
+
+      - name: Build binary
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release
+          use-cross: true
+
+      - name: Optimize and package binary
+        run: |
+          cd target/release
+          strip naru
+          chmod +x naru
+          mkdir dmg
+          mv naru dmg/
+          hdiutil create -fs HFS+ -srcfolder dmg -volname naru naru.dmg
+
+      - name: Upload binary
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          asset_name: naru-macOS-x86_64.dmg
+          asset_path: target/release/naru.dmg
+          upload_url: ${{ github.event.release.upload_url }}
+
+  windows-x86_64:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v1
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          default: true
+
+      - name: Build binary
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release
+          use-cross: true
+
+      - name: Upload binary
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          asset_name: naru-win32-x86_64.exe
+          asset_path: target/release/naru.exe
           upload_url: ${{ github.event.release.upload_url }}

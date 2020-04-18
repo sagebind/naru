@@ -5,7 +5,7 @@ Naru (_New ARchiving Utility_) is a cross platform, intuitive command line utili
 ![Version](https://img.shields.io/github/v/release/sagebind/naru)
 ![License](https://img.shields.io/github/license/sagebind/naru.svg)
 ![Maintenance](https://img.shields.io/badge/maintenance-actively--developed-brightgreen.svg)
-![Build](https://github.com/sagebind/naru/workflows/ci/badge.svg)
+[![Build](https://github.com/sagebind/naru/workflows/ci/badge.svg)](https://github.com/sagebind/naru/actions)
 
 ## License
 

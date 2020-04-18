@@ -58,3 +58,60 @@ jobs:
         with:
           name: naru-linux-x86_64.tar.gz
           path: target/x86_64-unknown-linux-musl/release/naru.tar.gz
+
+  macos-x86_64:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v1
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          default: true
+
+      - name: Build binary
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release
+          use-cross: true
+
+      - name: Optimize and package binary
+        run: |
+          cd target/release
+          strip naru
+          chmod +x naru
+          mkdir dmg
+          mv naru dmg/
+          hdiutil create -fs HFS+ -srcfolder dmg -volname naru naru.dmg
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v1
+        with:
+          name: naru-macOS-x86_64.dmg
+          path: target/release/naru.dmg
+
+  windows-x86_64:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v1
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          default: true
+
+      - name: Build binary
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release
+          use-cross: true
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v1
+        with:
+          name: naru-win32-x86_64.exe
+          path: target/release/naru.exe
