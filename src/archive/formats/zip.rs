@@ -20,7 +20,7 @@ use zip::{
     write::ZipWriter,
 };
 
-const DEFAULT_COMPRESSION_METHOD: zip::CompressionMethod = zip::CompressionMethod::Bzip2;
+const DEFAULT_COMPRESSION_METHOD: zip::CompressionMethod = zip::CompressionMethod::Deflated;
 
 pub struct Zip;
 

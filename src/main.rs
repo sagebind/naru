@@ -14,6 +14,14 @@ pub use io::*;
 /// Cross platform, intuitive file archiver command.
 #[derive(Debug, StructOpt)]
 struct Options {
+    /// Silence all command output
+    #[structopt(short, long)]
+    quiet: bool,
+
+    /// Change to directory DIR before running command.
+    #[structopt(short = "C", parse(from_os_str))]
+    directory: Option<PathBuf>,
+
     #[structopt(subcommand)]
     command: Command,
 }
@@ -29,6 +37,11 @@ enum Command {
     /// Create a new archive
     #[structopt(visible_alias = "c")]
     Create {
+        /// When adding a directory recursively, skip any child directory that
+        /// is on a different file system than the starting directory.
+        #[structopt(long)]
+        one_file_system: bool,
+
         /// Archive file ("-" for stdin)
         #[structopt(parse(from_os_str))]
         output: PathBuf,
@@ -46,18 +59,7 @@ enum Command {
     },
 
     #[structopt(visible_alias = "x")]
-    Extract {
-        /// Input file ("-" for stdin)
-        #[structopt(parse(from_os_str))]
-        input: PathBuf,
-
-        /// Directory to extract into
-        #[structopt(parse(from_os_str))]
-        dest: Option<PathBuf>,
-    },
-
-    #[structopt(visible_alias = "u")]
-    Update,
+    Extract(extract::Options),
 }
 
 fn progress_bar_style() -> indicatif::ProgressStyle {
@@ -91,8 +93,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match options.command {
         Command::Formats => show_formats(),
-        Command::Create {output, files} => create::create(&output, &files),
-        Command::Extract {input, dest} => extract::extract(&input, dest.as_deref()),
+        Command::Create {output, files, ..} => create::create(&output, &files),
+        Command::Extract(options) => options.run(),
         Command::List {input} => list::list(&input),
         _ => unimplemented!(),
     }
