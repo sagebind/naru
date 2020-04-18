@@ -14,27 +14,42 @@ pub use io::*;
 /// Cross platform, intuitive file archiver command.
 #[derive(Debug, StructOpt)]
 struct Options {
-    /// Silence all command output
-    #[structopt(short, long)]
-    quiet: bool,
-
-    /// Change to directory DIR before running command.
-    #[structopt(short = "C", parse(from_os_str))]
-    directory: Option<PathBuf>,
+    #[structopt(flatten)]
+    flags: Flags,
 
     #[structopt(subcommand)]
     command: Command,
 }
 
+// Flags shared by all commands.
+#[derive(Debug, StructOpt)]
+struct Flags {
+    /// Silence all command output
+    #[structopt(short, long)]
+    quiet: bool,
+
+    /// Verbose mode (-v, -vv, -vvv, etc)
+    #[structopt(short = "v", long, parse(from_occurrences))]
+    verbose: usize,
+
+    /// Change to directory DIR before running command.
+    #[structopt(short = "C", parse(from_os_str))]
+    directory: Option<PathBuf>,
+
+    /// Display base 10 file size units.
+    #[structopt(long)]
+    base_10: bool,
+}
+
 #[derive(Debug, StructOpt)]
 enum Command {
-    /// Show information about supported formats
+    /// Show information about supported formats.
     Formats,
 
     #[structopt(visible_alias = "a")]
     Add,
 
-    /// Create a new archive
+    /// Create a new archive.
     #[structopt(visible_alias = "c")]
     Create {
         /// When adding a directory recursively, skip any child directory that
@@ -51,6 +66,7 @@ enum Command {
         files: Vec<PathBuf>,
     },
 
+    /// List the contents of an archive.
     #[structopt(visible_alias = "l")]
     List {
         /// Input file ("-" for stdin)
@@ -59,7 +75,17 @@ enum Command {
     },
 
     #[structopt(visible_alias = "x")]
-    Extract(extract::Options),
+    Extract(extract::Command),
+}
+
+impl Flags {
+    fn base(&self) -> size::Base {
+        if self.base_10 {
+            size::Base::Base10
+        } else {
+            size::Base::Base2
+        }
+    }
 }
 
 fn progress_bar_style() -> indicatif::ProgressStyle {
@@ -91,11 +117,18 @@ fn show_formats() -> Result<(), Box<dyn std::error::Error>> {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let options = Options::from_args();
 
+    stderrlog::new()
+        // .module(module_path!())
+        .quiet(options.flags.quiet)
+        .verbosity(options.flags.verbose)
+        .init()
+        .unwrap();
+
     match options.command {
         Command::Formats => show_formats(),
         Command::Create {output, files, ..} => create::create(&output, &files),
         Command::Extract(options) => options.run(),
-        Command::List {input} => list::list(&input),
+        Command::List {input} => list::list(&options.flags, &input),
         _ => unimplemented!(),
     }
 }

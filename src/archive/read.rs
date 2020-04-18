@@ -29,6 +29,10 @@ pub trait Entry: Read {
 
     fn entry_type(&self) -> EntryType;
 
+    fn is_dir(&self) -> bool {
+        self.entry_type() == EntryType::Dir
+    }
+
     fn size(&self) -> u64;
 
     fn compressed_size(&self) -> Option<u64> {

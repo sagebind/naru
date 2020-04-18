@@ -14,7 +14,7 @@ use structopt::StructOpt;
 
 /// Extract files from an archive
 #[derive(Debug, StructOpt)]
-pub struct Options {
+pub struct Command {
     /// Directory to extract into
     #[structopt(short = "d", parse(from_os_str))]
     dest: Option<PathBuf>,
@@ -44,7 +44,7 @@ pub struct Options {
     files: Vec<Pattern>,
 }
 
-impl Options {
+impl Command {
     pub fn run(&self) -> Result<(), Box<dyn Error>> {
         let input = Input::open(&self.input)?;
 
@@ -105,7 +105,10 @@ impl Options {
                 if first_slash == None || first_slash == Some(pattern.as_str().len() - 1) {
                     match path.file_name() {
                         Some(file_name) => pattern.matches_path(Path::new(file_name)),
-                        None => false,
+                        None => {
+                            log::debug!("couldn't match path against pattern, no filename: {}", path.display());
+                            false
+                        },
                     }
                 } else {
                     pattern.matches_path(path)

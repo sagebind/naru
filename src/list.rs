@@ -9,18 +9,35 @@ use std::{
 };
 
 /// Handles the `list` command.
-pub fn list(input: &Path) -> Result<(), Box<dyn Error>> {
+pub(crate) fn list(flags: &super::Flags, input: &Path) -> Result<(), Box<dyn Error>> {
     let input_file = Input::open(&input)?;
 
     if let Some(mut reader) = archive::open(input_file)? {
+        let mut files = 0;
+        let mut dirs = 0;
+        let mut bytes = 0;
+
         while let Some(entry) = reader.entry()? {
+            if entry.is_dir() {
+                dirs += 1;
+            } else {
+                files += 1;
+                bytes += entry.size();
+            }
+
             println!(
-                "{:>19}  {:>7}  {}",
+                "{:>19}  {:>8}  {}",
                 EmptyFormat(entry.modified()),
-                size::Size::Bytes(entry.size()).to_string(size::Base::Base10, size::Style::Abbreviated),
+                EmptyFormat(if entry.is_dir() {
+                    None
+                } else {
+                    Some(size::Size::Bytes(entry.size()).to_string(flags.base(), size::Style::Abbreviated))
+                }),
                 entry.path().display(),
             );
         }
+
+        println!("{} files, {} directories, totalling {}", files, dirs, size::Size::Bytes(bytes).to_string(flags.base(), size::Style::Smart));
     } else {
         eprintln!("Unknown format: {}", input.display());
     }
