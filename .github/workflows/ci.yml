@@ -1,0 +1,48 @@
+name: ci
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+    runs-on: ${{ matrix.os }}
+    env:
+      RUST_BACKTRACE: 1
+    steps:
+      - uses: actions/checkout@v1
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: "1.39.0"
+          default: true
+
+      - run: cargo test
+
+      - run: cargo run -- --version
+
+      - name: Build binary
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --target x86_64-unknown-linux-musl
+          use-cross: true
+
+      - name: Optimize and package binary
+        run: |
+          strip target/x86_64-unknown-linux-musl/release/naru
+          chmod +x target/x86_64-unknown-linux-musl/release/naru
+          tar -c target/x86_64-unknown-linux-musl/release/naru | gzip > target/x86_64-unknown-linux-musl/release/naru.tar.gz
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v1
+        with:
+          name: naru-linux-x86_64.tar.gz
+          path: target/x86_64-unknown-linux-musl/release/naru.tar.gz

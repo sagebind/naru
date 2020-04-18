@@ -1,0 +1,38 @@
+name: release-binaries
+on:
+  release:
+    types: [published]
+
+jobs:
+  linux-x86_64:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: "1.39.0"
+          default: true
+
+      - name: Build binary
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --target x86_64-unknown-linux-musl
+          use-cross: true
+
+      - name: Optimize and package binary
+        run: |
+          strip target/x86_64-unknown-linux-musl/release/naru
+          chmod +x target/x86_64-unknown-linux-musl/release/naru
+          tar -c target/x86_64-unknown-linux-musl/release/naru | gzip > target/x86_64-unknown-linux-musl/release/naru.tar.gz
+
+      - name: Upload binary
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          asset_name: naru-linux-x86_64.tar.gz
+          asset_path: target/x86_64-unknown-linux-musl/release/naru.tar.gz
+          upload_url: ${{ github.event.release.upload_url }}
