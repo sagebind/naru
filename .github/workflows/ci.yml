@@ -48,9 +48,10 @@ jobs:
 
       - name: Optimize and package binary
         run: |
-          strip target/x86_64-unknown-linux-musl/release/naru
-          chmod +x target/x86_64-unknown-linux-musl/release/naru
-          tar -c target/x86_64-unknown-linux-musl/release/naru | gzip > target/x86_64-unknown-linux-musl/release/naru.tar.gz
+          cd target/x86_64-unknown-linux-musl/release
+          strip naru
+          chmod +x naru
+          tar -c naru | gzip > naru.tar.gz
 
       - name: Upload binary
         uses: actions/upload-artifact@v1
