@@ -28,4 +28,4 @@ jobs:
         run: cargo test
 
       - name: Verify command runs
-        run: cargo run -- --version
+        run: cargo run
