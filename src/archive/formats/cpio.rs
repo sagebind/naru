@@ -89,7 +89,7 @@ impl<'r, R: Read> Entry for &'r mut cpio::newc::Reader<R> {
             .entry_type(match self.entry().mode() & 0o0170000 {
                 0o0100000 => EntryType::File,
                 0o0040000 => EntryType::Dir,
-                _ => todo!(),
+                _ => todo!("account for 'unknown' entry types"),
             })
             .size(self.entry().file_size().into())
             .modified(if self.entry().mtime() > 0 {
@@ -97,6 +97,7 @@ impl<'r, R: Read> Entry for &'r mut cpio::newc::Reader<R> {
             } else {
                 None
             })
+            .unix_mode(Some(self.entry().mode() & 0o0000777))
             .build()
     }
 }

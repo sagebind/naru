@@ -82,6 +82,7 @@ impl<'r, R: Read + Seek> Entry for ar::Entry<'r, R> {
             } else {
                 None
             })
+            .unix_mode(Some(self.header().mode()))
             .build()
     }
 }

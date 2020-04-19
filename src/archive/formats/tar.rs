@@ -91,6 +91,7 @@ impl<'r, R: Read + 'r> Entry for tar::Entry<'r, R> {
                 .mtime()
                 .ok()
                 .map(|ts| Local.timestamp(ts as i64, 0)))
+            .unix_mode(self.header().mode().ok())
             .build()
     }
 }

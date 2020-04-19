@@ -42,6 +42,13 @@ pub struct Metadata {
     /// Timestamp of when the entry was last modified.
     #[builder(default)]
     pub modified: Option<DateTime<Local>>,
+
+    /// UNIX-mode permissions and file attributes.
+    ///
+    /// While files can only be extracted and inherit modes correctly on UNIX
+    /// platforms, the information can certainly be visible on any platform.
+    #[builder(default)]
+    pub unix_mode: Option<u32>,
 }
 
 impl Metadata {

@@ -117,6 +117,7 @@ impl<'a> Entry for ZipEntry<'a> {
                     dt.second().into(),
                 ),
             )).single())
+            .unix_mode(self.0.unix_mode())
             .build()
     }
 }
