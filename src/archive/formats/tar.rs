@@ -6,10 +6,10 @@
 //! [TAR archive]: https://en.wikipedia.org/wiki/Tar_%28computing%29
 
 use crate::{
-    archive::{ArchiveReader, Entry, EntryType},
+    archive::{ArchiveReader, Entry, EntryType, Metadata},
     input::Input,
 };
-use chrono::naive::NaiveDateTime;
+use chrono::prelude::*;
 use owning_ref::OwningHandle;
 use std::{
     fmt,
@@ -79,22 +79,18 @@ impl<'r, R: Read + 'r> Entry for tar::Entry<'r, R> {
         self.path().unwrap()
     }
 
-    fn entry_type(&self) -> EntryType {
-        if self.header().entry_type().is_dir() {
-            EntryType::Dir
-        } else {
-            EntryType::File
-        }
-    }
-
-    fn size(&self) -> u64 {
-        self.header().size().unwrap_or(0)
-    }
-
-    fn modified(&self) -> Option<NaiveDateTime> {
-        self.header()
-            .mtime()
-            .ok()
-            .map(|ts| NaiveDateTime::from_timestamp(ts as i64, 0))
+    fn metadata(&self) -> Metadata {
+        Metadata::builder()
+            .entry_type(if self.header().entry_type().is_dir() {
+                EntryType::Dir
+            } else {
+                EntryType::File
+            })
+            .size(self.header().size().unwrap_or(0))
+            .modified(self.header()
+                .mtime()
+                .ok()
+                .map(|ts| Local.timestamp(ts as i64, 0)))
+            .build()
     }
 }

@@ -94,37 +94,30 @@ impl<'a> Entry for ZipEntry<'a> {
         self.0.sanitized_name().into()
     }
 
-    fn entry_type(&self) -> EntryType {
-        if self.0.is_dir() {
-            EntryType::Dir
-        } else {
-            EntryType::File
-        }
-    }
-
-    fn size(&self) -> u64 {
-        self.0.size()
-    }
-
-    fn compressed_size(&self) -> Option<u64> {
-        Some(self.0.compressed_size())
-    }
-
-    fn modified(&self) -> Option<NaiveDateTime> {
+    fn metadata(&self) -> Metadata {
         let dt = self.0.last_modified();
 
-        Some(NaiveDateTime::new(
-            NaiveDate::from_ymd(
-                dt.year().into(),
-                dt.month().into(),
-                dt.day().into(),
-            ),
-            NaiveTime::from_hms(
-                dt.hour().into(),
-                dt.minute().into(),
-                dt.second().into(),
-            ),
-        ))
+        Metadata::builder()
+            .entry_type(if self.0.is_dir() {
+                EntryType::Dir
+            } else {
+                EntryType::File
+            })
+            .size(self.0.size())
+            .compressed_size(Some(self.0.compressed_size()))
+            .modified(Local.from_local_datetime(&NaiveDateTime::new(
+                NaiveDate::from_ymd(
+                    dt.year().into(),
+                    dt.month().into(),
+                    dt.day().into(),
+                ),
+                NaiveTime::from_hms(
+                    dt.hour().into(),
+                    dt.minute().into(),
+                    dt.second().into(),
+                ),
+            )).single())
+            .build()
     }
 }
 
@@ -158,7 +151,7 @@ fn create_file_options(metadata: Metadata) -> zip::write::FileOptions {
     let mut options = zip::write::FileOptions::default()
     .compression_method(DEFAULT_COMPRESSION_METHOD);
 
-    if let Some(datetime) = metadata.last_modified {
+    if let Some(datetime) = metadata.modified {
         if let Ok(datetime) = zip::DateTime::from_date_and_time(
             datetime.year() as u16,
             datetime.month() as u8,

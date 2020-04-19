@@ -45,7 +45,7 @@ pub struct Command {
 }
 
 impl Command {
-    pub fn run(&self) -> Result<(), Box<dyn Error>> {
+    pub fn execute(&self) -> Result<(), Box<dyn Error>> {
         let input = Input::open(&self.input)?;
 
         let dest = match &self.dest {

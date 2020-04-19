@@ -10,6 +10,7 @@ use std::{
 };
 
 mod ar;
+mod cpio;
 mod fat;
 mod tar;
 mod zip;
@@ -29,6 +30,7 @@ pub trait ArchiveFormat: Format {
 pub fn all() -> &'static [&'static dyn ArchiveFormat] {
     &[
         &ar::Ar,
+        &cpio::Cpio,
         &fat::Fat,
         &tar::Tar,
         &zip::Zip,

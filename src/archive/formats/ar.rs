@@ -3,10 +3,10 @@
 //! [ar]: https://en.wikipedia.org/wiki/Ar_(Unix)
 
 use crate::{
-    archive::{ArchiveReader, Entry, EntryType},
+    archive::{ArchiveReader, Entry, EntryType, Metadata},
     input::Input,
 };
-use chrono::naive::NaiveDateTime;
+use chrono::prelude::*;
 use std::{
     borrow::Cow,
     fmt,
@@ -73,15 +73,15 @@ impl<'r, R: Read + Seek> Entry for ar::Entry<'r, R> {
         }
     }
 
-    fn entry_type(&self) -> EntryType {
-        EntryType::File
-    }
-
-    fn size(&self) -> u64 {
-        self.header().size()
-    }
-
-    fn modified(&self) -> Option<NaiveDateTime> {
-        Some(NaiveDateTime::from_timestamp(self.header().mtime() as i64, 0))
+    fn metadata(&self) -> Metadata {
+        Metadata::builder()
+            .entry_type(EntryType::File)
+            .size(self.header().size())
+            .modified(if self.header().mtime() > 0 {
+                Some(Local.timestamp(self.header().mtime() as i64, 0))
+            } else {
+                None
+            })
+            .build()
     }
 }

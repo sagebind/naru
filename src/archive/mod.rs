@@ -19,15 +19,73 @@ pub use self::{
     write::*,
 };
 
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, TypedBuilder)]
 pub struct Metadata {
-    last_modified: Option<DateTime<Local>>,
+    /// The type of entry this metadata represents.
+    pub entry_type: EntryType,
+
+    /// The size of the file in bytes.
+    ///
+    /// For other entry types like directories, will likely be zero and isn't
+    /// used.
+    #[builder(default = 0)]
+    pub size: u64,
+
+    /// If the enclosing archive supports inherent compression, the compressed
+    /// size taken up by this file in bytes.
+    ///
+    /// For other entry types like directories, will likely be zero and isn't
+    /// used.
+    #[builder(default)]
+    pub compressed_size: Option<u64>,
+
+    /// Timestamp of when the entry was last modified.
+    #[builder(default)]
+    pub modified: Option<DateTime<Local>>,
+}
+
+impl Metadata {
+    pub fn is_dir(&self) -> bool {
+        self.entry_type == EntryType::Dir
+    }
 }
 
 impl From<fs::Metadata> for Metadata {
     fn from(metadata: fs::Metadata) -> Self {
-        Self {
-            last_modified: metadata.modified().ok().map(From::from),
+        Self::builder()
+            .entry_type(metadata.file_type().into())
+            .size(metadata.len())
+            .modified(metadata.modified().ok().map(From::from))
+            .build()
+    }
+}
+
+/// Possible entry types in an archive.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum EntryType {
+    /// A regular file.
+    File,
+
+    /// A regular directory.
+    ///
+    /// Directories do not contain data and are purely informational. An archive
+    /// could contain nested paths even if there are no corresponding directory
+    /// entries for them.
+    Dir,
+}
+
+impl Default for EntryType {
+    fn default() -> Self {
+        Self::File
+    }
+}
+
+impl From<fs::FileType> for EntryType {
+    fn from(file_type: fs::FileType) -> Self {
+        if file_type.is_dir() {
+            Self::Dir
+        } else {
+            Self::File
         }
     }
 }

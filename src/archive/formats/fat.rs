@@ -1,7 +1,7 @@
 //! https://www.win.tue.nl/~aeb/linux/fs/fat/fat-1.html
 
 use crate::{
-    archive::{ArchiveReader, Entry, EntryType},
+    archive::{ArchiveReader, Entry, EntryType, Metadata},
     input::Input,
 };
 use owning_ref::OwningHandle;
@@ -80,16 +80,15 @@ impl<'a> Entry for FatEntry<'a> {
         PathBuf::from(self.0.file_name()).into()
     }
 
-    fn entry_type(&self) -> EntryType {
-        if self.0.is_dir() {
-            EntryType::Dir
-        } else {
-            EntryType::File
-        }
-    }
-
-    fn size(&self) -> u64 {
-        self.0.len()
+    fn metadata(&self) -> Metadata {
+        Metadata::builder()
+            .entry_type(if self.0.is_dir() {
+                EntryType::Dir
+            } else {
+                EntryType::File
+            })
+            .size(self.0.len())
+            .build()
     }
 }
 

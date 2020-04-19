@@ -1,4 +1,10 @@
-use std::path::PathBuf;
+#[macro_use]
+extern crate typed_builder;
+
+use std::{
+    error::Error,
+    path::PathBuf,
+};
 use structopt::StructOpt;
 
 mod archive;
@@ -25,19 +31,19 @@ struct Options {
 #[derive(Debug, StructOpt)]
 struct Flags {
     /// Silence all command output
-    #[structopt(short, long)]
+    #[structopt(short, long, global = true)]
     quiet: bool,
 
     /// Verbose mode (-v, -vv, -vvv, etc)
-    #[structopt(short = "v", long, parse(from_occurrences))]
+    #[structopt(short = "v", long, parse(from_occurrences), global = true)]
     verbose: usize,
 
     /// Change to directory DIR before running command.
-    #[structopt(short = "C", parse(from_os_str))]
+    #[structopt(short = "C", parse(from_os_str), global = true)]
     directory: Option<PathBuf>,
 
     /// Display base 10 file size units.
-    #[structopt(long)]
+    #[structopt(long, global = true)]
     base_10: bool,
 }
 
@@ -46,33 +52,11 @@ enum Command {
     /// Show information about supported formats.
     Formats,
 
-    #[structopt(visible_alias = "a")]
-    Add,
-
-    /// Create a new archive.
     #[structopt(visible_alias = "c")]
-    Create {
-        /// When adding a directory recursively, skip any child directory that
-        /// is on a different file system than the starting directory.
-        #[structopt(long)]
-        one_file_system: bool,
+    Create(create::Command),
 
-        /// Archive file ("-" for stdin)
-        #[structopt(parse(from_os_str))]
-        output: PathBuf,
-
-        /// Files to add
-        #[structopt(parse(from_os_str))]
-        files: Vec<PathBuf>,
-    },
-
-    /// List the contents of an archive.
     #[structopt(visible_alias = "l")]
-    List {
-        /// Input file ("-" for stdin)
-        #[structopt(parse(from_os_str))]
-        input: PathBuf,
-    },
+    List(list::Command),
 
     #[structopt(visible_alias = "x")]
     Extract(extract::Command),
@@ -98,24 +82,9 @@ fn progress_bar_style() -> indicatif::ProgressStyle {
         .progress_chars("=> ")
 }
 
-fn show_formats() -> Result<(), Box<dyn std::error::Error>> {
-    println!("Archive formats:");
-
-    for format in archive::formats::all() {
-        println!("  {}", format);
-    }
-
-    println!("Compression stream formats:");
-
-    for format in compress::formats::all() {
-        println!("  {}", format);
-    }
-
-    Ok(())
-}
-
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), Box<dyn Error>> {
     let options = Options::from_args();
+    log::debug!("parsed arguments: {:?}", options);
 
     stderrlog::new()
         // .module(module_path!())
@@ -125,10 +94,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap();
 
     match options.command {
-        Command::Formats => show_formats(),
-        Command::Create {output, files, ..} => create::create(&output, &files),
-        Command::Extract(options) => options.run(),
-        Command::List {input} => list::list(&options.flags, &input),
-        _ => unimplemented!(),
+        Command::Create(command) => command.execute(),
+        Command::Extract(command) => command.execute(),
+        Command::List(command) => command.execute(&options.flags),
+        Command::Formats => {
+            println!("Archive formats:");
+
+            for format in archive::formats::all() {
+                println!("  {}", format);
+            }
+
+            println!("Compression stream formats:");
+
+            for format in compress::formats::all() {
+                println!("  {}", format);
+            }
+
+            Ok(())
+        },
     }
 }

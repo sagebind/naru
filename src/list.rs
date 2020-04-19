@@ -5,44 +5,56 @@ use crate::{
 use std::{
     error::Error,
     fmt,
-    path::Path,
+    path::PathBuf,
 };
+use structopt::StructOpt;
 
-/// Handles the `list` command.
-pub(crate) fn list(flags: &super::Flags, input: &Path) -> Result<(), Box<dyn Error>> {
-    let input_file = Input::open(&input)?;
+/// List the contents of an archive.
+#[derive(Debug, StructOpt)]
+pub struct Command {
+    /// Input file ("-" for stdin).
+    #[structopt(parse(from_os_str))]
+    input: PathBuf,
+}
 
-    if let Some(mut reader) = archive::open(input_file)? {
-        let mut files = 0;
-        let mut dirs = 0;
-        let mut bytes = 0;
+impl Command {
+    pub(crate) fn execute(&self, flags: &super::Flags) -> Result<(), Box<dyn Error>> {
+        let input_file = Input::open(&self.input)?;
 
-        while let Some(entry) = reader.entry()? {
-            if entry.is_dir() {
-                dirs += 1;
-            } else {
-                files += 1;
-                bytes += entry.size();
+        if let Some(mut reader) = archive::open(input_file)? {
+            let mut files = 0;
+            let mut dirs = 0;
+            let mut bytes = 0;
+
+            while let Some(entry) = reader.entry()? {
+                let metadata = entry.metadata();
+
+                if metadata.is_dir() {
+                    dirs += 1;
+                } else {
+                    files += 1;
+                    bytes += metadata.size;
+                }
+
+                println!(
+                    "{:>19}  {:>8}  {}",
+                    EmptyFormat(metadata.modified.as_ref()),
+                    EmptyFormat(if metadata.is_dir() {
+                        None
+                    } else {
+                        Some(size::Size::Bytes(metadata.size).to_string(flags.base(), size::Style::Abbreviated))
+                    }),
+                    entry.path().display(),
+                );
             }
 
-            println!(
-                "{:>19}  {:>8}  {}",
-                EmptyFormat(entry.modified()),
-                EmptyFormat(if entry.is_dir() {
-                    None
-                } else {
-                    Some(size::Size::Bytes(entry.size()).to_string(flags.base(), size::Style::Abbreviated))
-                }),
-                entry.path().display(),
-            );
+            println!("{} files, {} directories, totalling {}", files, dirs, size::Size::Bytes(bytes).to_string(flags.base(), size::Style::Smart));
+        } else {
+            eprintln!("Unknown format: {}", self.input.display());
         }
 
-        println!("{} files, {} directories, totalling {}", files, dirs, size::Size::Bytes(bytes).to_string(flags.base(), size::Style::Smart));
-    } else {
-        eprintln!("Unknown format: {}", input.display());
+        Ok(())
     }
-
-    Ok(())
 }
 
 #[derive(Debug)]

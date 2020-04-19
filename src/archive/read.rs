@@ -1,4 +1,4 @@
-use chrono::naive::NaiveDateTime;
+use super::EntryType;
 use std::{
     borrow::Cow,
     fs,
@@ -27,21 +27,8 @@ pub trait Entry: Read {
     /// Get the full path of this entry, relative to the root of the archive.
     fn path(&self) -> Cow<'_, Path>;
 
-    fn entry_type(&self) -> EntryType;
-
-    fn is_dir(&self) -> bool {
-        self.entry_type() == EntryType::Dir
-    }
-
-    fn size(&self) -> u64;
-
-    fn compressed_size(&self) -> Option<u64> {
-        None
-    }
-
-    fn modified(&self) -> Option<NaiveDateTime> {
-        None
-    }
+    /// Get the metadata for this entry.
+    fn metadata(&self) -> super::Metadata;
 
     /// Extract this entry into the file system within the given path.
     ///
@@ -55,7 +42,7 @@ pub trait Entry: Read {
             fs::create_dir_all(parent)?;
         }
 
-        match self.entry_type() {
+        match self.metadata().entry_type {
             EntryType::Dir => fs::create_dir(dest)?,
             EntryType::File => {
                 // Create the file and stream this entry's bytes into it.
@@ -66,10 +53,4 @@ pub trait Entry: Read {
 
         Ok(())
     }
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum EntryType {
-    File,
-    Dir,
 }
