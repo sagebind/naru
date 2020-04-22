@@ -99,7 +99,7 @@ impl<'a> Entry for ZipEntry<'a> {
 
         Metadata::builder()
             .entry_type(if self.0.is_dir() {
-                EntryType::Dir
+                EntryType::Directory
             } else {
                 EntryType::File
             })

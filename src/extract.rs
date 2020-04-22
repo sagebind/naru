@@ -27,6 +27,20 @@ pub struct Command {
     #[structopt(short, long)]
     overwrite: bool,
 
+    /// Do not restore file timestamps.
+    #[structopt(long)]
+    ignore_timestamp: bool,
+
+    /// Do not restore UNIX file attributes.
+    ///
+    /// On Windows, only "readonly" is restored.
+    #[structopt(long)]
+    ignore_permissions: bool,
+
+    /// Restore SUID/SGID bits.
+    #[structopt(long)]
+    preserve_extra_bits: bool,
+
     /// Input file ("-" for stdin)
     #[structopt(parse(from_os_str))]
     input: PathBuf,
@@ -59,7 +73,6 @@ impl Command {
                 if let Some(input_path) = input.path() {
                     if let Some(archive_file_name) = input_path.file_stem() {
                         path = path.join(archive_file_name);
-                        fs::create_dir(&path)?;
                     }
                 }
 
@@ -68,6 +81,10 @@ impl Command {
         };
 
         if let Some(mut reader) = archive::open(input)? {
+            // Ensure the target directory is created if it does not already
+            // exist.
+            fs::create_dir_all(dest.as_ref())?;
+
             let progress_bar = match reader.len() {
                 Some(len) => ProgressBar::new(len).with_style(super::progress_bar_style()),
                 None => ProgressBar::new_spinner(),

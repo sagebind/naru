@@ -19,6 +19,42 @@ pub use self::{
     write::*,
 };
 
+/// Possible entry types in an archive.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum EntryType {
+    /// A regular file.
+    File,
+
+    /// A regular directory.
+    ///
+    /// Directories do not contain data and are purely informational. An archive
+    /// could contain nested paths even if there are no corresponding directory
+    /// entries for them.
+    Directory,
+
+    /// A symbolic link to another file by name.
+    SymbolicLink,
+
+    /// Some other type of file not supported by Naru.
+    Unsupported,
+}
+
+impl Default for EntryType {
+    fn default() -> Self {
+        Self::File
+    }
+}
+
+impl From<fs::FileType> for EntryType {
+    fn from(file_type: fs::FileType) -> Self {
+        if file_type.is_dir() {
+            Self::Directory
+        } else {
+            Self::File
+        }
+    }
+}
+
 #[derive(Clone, Debug, Default, Eq, PartialEq, TypedBuilder)]
 pub struct Metadata {
     /// The type of entry this metadata represents.
@@ -43,6 +79,20 @@ pub struct Metadata {
     #[builder(default)]
     pub modified: Option<DateTime<Local>>,
 
+    /// Flag indicating that this file is marked as read-only.
+    ///
+    /// The meaning of this flag can vary depending on the file system, archive
+    /// format, or operating system that the entry came from.
+    #[builder(default)]
+    pub read_only: bool,
+
+    /// Flag indicating that this file is marked as hidden.
+    ///
+    /// The meaning of this flag can vary depending on the file system, archive
+    /// format, or operating system that the entry came from.
+    #[builder(default)]
+    pub hidden: bool,
+
     /// UNIX-mode permissions and file attributes.
     ///
     /// While files can only be extracted and inherit modes correctly on UNIX
@@ -53,7 +103,7 @@ pub struct Metadata {
 
 impl Metadata {
     pub fn is_dir(&self) -> bool {
-        self.entry_type == EntryType::Dir
+        self.entry_type == EntryType::Directory
     }
 }
 
@@ -64,36 +114,6 @@ impl From<fs::Metadata> for Metadata {
             .size(metadata.len())
             .modified(metadata.modified().ok().map(From::from))
             .build()
-    }
-}
-
-/// Possible entry types in an archive.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum EntryType {
-    /// A regular file.
-    File,
-
-    /// A regular directory.
-    ///
-    /// Directories do not contain data and are purely informational. An archive
-    /// could contain nested paths even if there are no corresponding directory
-    /// entries for them.
-    Dir,
-}
-
-impl Default for EntryType {
-    fn default() -> Self {
-        Self::File
-    }
-}
-
-impl From<fs::FileType> for EntryType {
-    fn from(file_type: fs::FileType) -> Self {
-        if file_type.is_dir() {
-            Self::Dir
-        } else {
-            Self::File
-        }
     }
 }
 

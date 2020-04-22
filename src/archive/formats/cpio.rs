@@ -88,7 +88,7 @@ impl<'r, R: Read> Entry for &'r mut cpio::newc::Reader<R> {
         Metadata::builder()
             .entry_type(match self.entry().mode() & 0o0170000 {
                 0o0100000 => EntryType::File,
-                0o0040000 => EntryType::Dir,
+                0o0040000 => EntryType::Directory,
                 _ => todo!("account for 'unknown' entry types"),
             })
             .size(self.entry().file_size().into())

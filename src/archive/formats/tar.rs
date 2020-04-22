@@ -12,9 +12,10 @@ use crate::{
 use chrono::prelude::*;
 use owning_ref::OwningHandle;
 use std::{
+    borrow::Cow,
     fmt,
     io::{Read, Result},
-    path::Path,
+    path::{Path, PathBuf},
 };
 
 /// Format provider for tar.
@@ -75,16 +76,17 @@ impl<'r, R: Read + 'r> ArchiveReader for TarReader<'r, R> {
 }
 
 impl<'r, R: Read + 'r> Entry for tar::Entry<'r, R> {
-    fn path(&self) -> std::borrow::Cow<'_, Path> {
-        self.path().unwrap()
+    fn path(&self) -> Cow<'_, Path> {
+        crate::paths::path_from_unix_path_bytes(self.path_bytes())
     }
 
     fn metadata(&self) -> Metadata {
         Metadata::builder()
-            .entry_type(if self.header().entry_type().is_dir() {
-                EntryType::Dir
-            } else {
-                EntryType::File
+            .entry_type(match self.header().entry_type() {
+                tar::EntryType::Regular | tar::EntryType::Continuous => EntryType::File,
+                tar::EntryType::Directory => EntryType::Directory,
+                tar::EntryType::Symlink => EntryType::SymbolicLink,
+                _ => EntryType::Unsupported,
             })
             .size(self.header().size().unwrap_or(0))
             .modified(self.header()
@@ -93,5 +95,9 @@ impl<'r, R: Read + 'r> Entry for tar::Entry<'r, R> {
                 .map(|ts| Local.timestamp(ts as i64, 0)))
             .unix_mode(self.header().mode().ok())
             .build()
+    }
+
+    fn read_link(&mut self) -> Result<Option<Cow<'_, Path>>> {
+        Ok(self.link_name_bytes().map(crate::paths::path_from_unix_path_bytes))
     }
 }

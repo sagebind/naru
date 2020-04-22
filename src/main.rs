@@ -14,6 +14,7 @@ mod extract;
 mod format;
 mod io;
 mod list;
+mod paths;
 
 pub use io::*;
 

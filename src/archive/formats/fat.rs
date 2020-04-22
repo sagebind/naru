@@ -83,11 +83,13 @@ impl<'a> Entry for FatEntry<'a> {
     fn metadata(&self) -> Metadata {
         Metadata::builder()
             .entry_type(if self.0.is_dir() {
-                EntryType::Dir
+                EntryType::Directory
             } else {
                 EntryType::File
             })
             .size(self.0.len())
+            .read_only(self.0.attributes().contains(fatfs::FileAttributes::READ_ONLY))
+            .hidden(self.0.attributes().contains(fatfs::FileAttributes::HIDDEN))
             .build()
     }
 }

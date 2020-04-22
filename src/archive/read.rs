@@ -30,24 +30,38 @@ pub trait Entry: Read {
     /// Get the metadata for this entry.
     fn metadata(&self) -> super::Metadata;
 
+    /// If this entry is a symbolic link of some kind, get the target path that
+    /// the link points to.
+    fn read_link(&mut self) -> io::Result<Option<Cow<'_, Path>>> {
+        Ok(None)
+    }
+
     /// Extract this entry into the file system within the given path.
     ///
     /// The entire path of this entry within the archive will be recreated in
     /// the destination path.
     fn extract(&mut self, dir: &Path) -> io::Result<()> {
-        let dest = dir.join(self.path());
+        let path = self.path();
+        let dest = dir.join(&path);
+
+        // TODO: What if path points to a directory above the archive? (security)
 
         // Create parent directories if required.
         if let Some(parent) = dest.parent() {
             fs::create_dir_all(parent)?;
         }
 
-        match self.metadata().entry_type {
-            EntryType::Dir => fs::create_dir(dest)?,
+        let metadata = self.metadata();
+
+        match metadata.entry_type {
+            EntryType::Directory => fs::create_dir(dest)?,
             EntryType::File => {
                 // Create the file and stream this entry's bytes into it.
                 let mut file = File::create(dest)?;
                 io::copy(self, &mut file)?;
+            }
+            _ => {
+                log::warn!("skipping entry {}, unsupported type", path.display())
             }
         }
 
