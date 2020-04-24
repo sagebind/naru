@@ -15,6 +15,7 @@ mod format;
 mod io;
 mod list;
 mod paths;
+mod util;
 
 pub use io::*;
 

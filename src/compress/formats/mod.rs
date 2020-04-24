@@ -1,8 +1,9 @@
 use crate::{
     format::Format,
     input::Input,
+    util::MaybeBoxedMut,
 };
-use std::io::{Read, Result};
+use std::io::{Read, Result, Write};
 
 mod bzip2;
 mod compress;
@@ -12,7 +13,13 @@ mod xz;
 mod zlib;
 
 pub trait CompressionFormat: Format {
-    fn new_encoder(&self, input: Input) -> Result<Box<dyn Read>>;
+    fn new_decoder(&self, reader: Box<dyn Read>) -> Result<Box<dyn Read>> {
+        unimplemented!()
+    }
+
+    fn new_encoder<'w>(&self, writer: MaybeBoxedMut<'w, dyn Write>) -> Result<Box<dyn Write + 'w>> {
+        unimplemented!()
+    }
 }
 
 /// Get all enabled formats.

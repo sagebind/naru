@@ -29,7 +29,4 @@ impl fmt::Display for Compress {
 }
 
 impl super::CompressionFormat for Compress {
-    fn new_encoder(&self, input: Input) -> Result<Box<dyn Read>> {
-        unimplemented!()
-    }
 }

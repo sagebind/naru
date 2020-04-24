@@ -30,9 +30,6 @@ impl fmt::Display for Lzip {
 }
 
 impl super::CompressionFormat for Lzip {
-    fn new_encoder(&self, input: Input) -> Result<Box<dyn Read>> {
-        unimplemented!()
-    }
 }
 
 pub struct LzipDecoder {}

@@ -118,6 +118,9 @@ impl From<fs::Metadata> for Metadata {
 }
 
 pub fn open(mut input: Input) -> Result<Option<Box<dyn ArchiveReader>>> {
+    // Automatically decode any compression streams first.
+    crate::compress::wrap_decompressors(&mut input)?;
+
     if let Some(format) = formats::for_bytes(input.fill_buf()?) {
         Ok(Some(format.open(input)?))
     } else {

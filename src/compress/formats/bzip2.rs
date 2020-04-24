@@ -3,8 +3,9 @@
 use crate::{
     format::Format,
     input::Input,
+    util::MaybeBoxedMut,
 };
-use std::{fmt, io::{Read, Result}};
+use std::{fmt, io::{Read, Result, Write}};
 
 pub struct Bzip2;
 
@@ -29,7 +30,11 @@ impl fmt::Display for Bzip2 {
 }
 
 impl super::CompressionFormat for Bzip2 {
-    fn new_encoder(&self, input: Input) -> Result<Box<dyn Read>> {
-        Ok(Box::new(bzip2::read::BzDecoder::new(input)))
+    fn new_decoder(&self, reader: Box<dyn Read>) -> Result<Box<dyn Read>> {
+        Ok(Box::new(bzip2::read::BzDecoder::new(reader)))
+    }
+
+    fn new_encoder<'w>(&self, writer: MaybeBoxedMut<'w, dyn Write>) -> Result<Box<dyn Write + 'w>> {
+        Ok(Box::new(bzip2::write::BzEncoder::new(writer, bzip2::Compression::Default)))
     }
 }
