@@ -1,8 +1,9 @@
 //! Archive format APIs for reading and writing.
 
 use crate::{
+    compress,
     input::Input,
-    output::Output,
+    output::Output
 };
 use chrono::prelude::*;
 use std::{
@@ -14,10 +15,7 @@ pub mod formats;
 mod read;
 mod write;
 
-pub use self::{
-    read::*,
-    write::*,
-};
+pub use self::{read::*, write::*};
 
 /// Possible entry types in an archive.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -117,15 +115,23 @@ impl From<fs::Metadata> for Metadata {
     }
 }
 
-pub fn open(mut input: Input) -> Result<Option<Box<dyn ArchiveReader>>> {
+/// Attempt to read the given input stream as an archive file.
+///
+/// If the stream has any stream compression algorithms applied, this function
+/// will first attempt to decode them first.
+pub fn open<'r>(mut input: Input<'r>) -> Result<Option<Box<dyn ArchiveReader + 'r>>> {
     // Automatically decode any compression streams first.
-    crate::compress::wrap_decompressors(&mut input)?;
+    input = compress::detect_decode(input)?;
 
-    if let Some(format) = formats::for_bytes(input.fill_buf()?) {
-        Ok(Some(format.open(input)?))
-    } else {
-        Ok(None)
+    // Detect archive format.
+    for format in formats::all() {
+        if format.match_bytes(input.fill_buf()?) {
+            log::debug!("detected {} archive", format.id());
+            return Ok(Some(format.open(input)?));
+        }
     }
+
+    Ok(None)
 }
 
 pub fn create<'o>(output: &'o mut Output) -> Result<Option<Box<dyn ArchiveWriter + 'o>>> {

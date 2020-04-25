@@ -38,7 +38,7 @@ impl fmt::Display for Ar {
 }
 
 impl super::ArchiveFormat for Ar {
-    fn open(&self, input: Input) -> Result<Box<dyn ArchiveReader>> {
+    fn open<'r>(&self, input: Input<'r>) -> Result<Box<dyn ArchiveReader + 'r>> {
         Ok(Box::new(ArReader::new(input)))
     }
 }

@@ -9,6 +9,8 @@ use std::{
 };
 use structopt::StructOpt;
 
+const DATE_FORMAT: &str = "%Y-%m-%d %H:%M:%S";
+
 /// List the contents of an archive.
 #[derive(Debug, StructOpt)]
 pub struct Command {
@@ -38,7 +40,7 @@ impl Command {
 
                 println!(
                     "{:>19}  {:>8}  {}",
-                    EmptyFormat(metadata.modified.as_ref()),
+                    EmptyFormat(metadata.modified.clone().map(|dt| dt.format(DATE_FORMAT))),
                     EmptyFormat(if metadata.is_dir() {
                         None
                     } else {

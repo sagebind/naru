@@ -31,7 +31,7 @@ impl fmt::Display for Zlib {
 }
 
 impl super::CompressionFormat for Zlib {
-    fn new_decoder(&self, reader: Box<dyn Read>) -> Result<Box<dyn Read>> {
-        Ok(Box::new(flate2::read::ZlibDecoder::new(reader)))
+    fn new_decoder<'r>(&self, input: Input<'r>) -> Result<Box<dyn Read + 'r>> {
+        Ok(Box::new(flate2::read::ZlibDecoder::new(input)))
     }
 }

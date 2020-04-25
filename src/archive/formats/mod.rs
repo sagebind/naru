@@ -10,6 +10,7 @@ use std::{
 };
 
 mod ar;
+mod cab;
 mod cpio;
 mod fat;
 mod tar;
@@ -18,7 +19,7 @@ mod zip;
 /// A provider implementation for a specific archive format.
 pub trait ArchiveFormat: Format {
     /// Open the given input for reading.
-    fn open(&self, input: Input) -> Result<Box<dyn ArchiveReader>>;
+    fn open<'r>(&self, input: Input<'r>) -> Result<Box<dyn ArchiveReader + 'r>>;
 
     /// Create a writer for writing an archive to a stream.
     fn create<'w>(&self, _sink: &'w mut Output) -> Result<Box<dyn super::ArchiveWriter + 'w>> {
@@ -30,20 +31,12 @@ pub trait ArchiveFormat: Format {
 pub fn all() -> &'static [&'static dyn ArchiveFormat] {
     &[
         &ar::Ar,
+        &cab::Cab,
         &cpio::Cpio,
         &fat::Fat,
         &tar::Tar,
         &zip::Zip,
     ]
-}
-
-/// Get an appropriate archive format provider for a file beginning with the given
-/// bytes.
-pub fn for_bytes(bytes: &[u8]) -> Option<&'static dyn ArchiveFormat> {
-    all().iter()
-        .filter(|format| format.match_bytes(bytes))
-        .map(|format| *format)
-        .next()
 }
 
 /// Get an appropriate format provider for a file with the given file extension.

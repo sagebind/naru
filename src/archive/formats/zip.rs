@@ -45,8 +45,8 @@ impl fmt::Display for Zip {
 }
 
 impl super::ArchiveFormat for Zip {
-    fn open(&self, input: Input) -> Result<Box<dyn ArchiveReader>> {
-        Ok(Box::new(ZipReader::open(input)?))
+    fn open<'r>(&self, input: Input<'r>) -> Result<Box<dyn ArchiveReader + 'r>> {
+        Ok(Box::new(ZipReader::open(input.into_file()?)?))
     }
 
     fn create<'w>(&self, output: &'w mut Output) -> Result<Box<dyn ArchiveWriter + 'w>> {

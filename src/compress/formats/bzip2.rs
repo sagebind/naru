@@ -30,8 +30,8 @@ impl fmt::Display for Bzip2 {
 }
 
 impl super::CompressionFormat for Bzip2 {
-    fn new_decoder(&self, reader: Box<dyn Read>) -> Result<Box<dyn Read>> {
-        Ok(Box::new(bzip2::read::BzDecoder::new(reader)))
+    fn new_decoder<'r>(&self, input: Input<'r>) -> Result<Box<dyn Read + 'r>> {
+        Ok(Box::new(bzip2::read::BzDecoder::new(input)))
     }
 
     fn new_encoder<'w>(&self, writer: MaybeBoxedMut<'w, dyn Write>) -> Result<Box<dyn Write + 'w>> {

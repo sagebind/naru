@@ -1,5 +1,6 @@
 use crate::{
     archive,
+    archive::{Entry, EntryType},
     io::input::Input,
 };
 use glob::Pattern;
@@ -8,6 +9,8 @@ use std::{
     borrow::Cow,
     error::Error,
     fs,
+    fs::{File, OpenOptions},
+    io,
     path::{Path, PathBuf},
 };
 use structopt::StructOpt;
@@ -41,6 +44,11 @@ pub struct Command {
     #[structopt(long)]
     preserve_extra_bits: bool,
 
+    /// Extract slowly for testing purposes.
+    #[cfg(debug_assertions)]
+    #[structopt(long)]
+    go_slow: bool,
+
     /// Input file ("-" for stdin)
     #[structopt(parse(from_os_str))]
     input: PathBuf,
@@ -70,8 +78,8 @@ impl Command {
             None => {
                 let mut path = std::env::current_dir()?;
 
-                if let Some(input_path) = input.path() {
-                    if let Some(archive_file_name) = input_path.file_stem() {
+                if let Some(archive_file_name) = self.input.file_stem() {
+                    if archive_file_name != "-" {
                         path = path.join(archive_file_name);
                     }
                 }
@@ -95,7 +103,15 @@ impl Command {
 
                 if self.should_extract(&path) {
                     progress_bar.set_message(&path.to_string_lossy());
-                    entry.extract(&dest)?;
+
+                    #[cfg(debug_assertions)]
+                    {
+                        if self.go_slow {
+                            std::thread::sleep_ms(1000);
+                        }
+                    }
+
+                    self.extract(&mut *entry, &dest)?;
                 }
 
                 progress_bar.inc(1);
@@ -132,5 +148,44 @@ impl Command {
                 }
             })
         }
+    }
+
+    /// Extract an entry into the file system within the given path.
+    ///
+    /// The entire path of this entry within the archive will be recreated in
+    /// the destination path.
+    fn extract(&self, entry: &mut dyn Entry, dir: &Path) -> Result<(), Box<dyn Error>> {
+        let path = entry.path();
+        let dest = dir.join(&path);
+
+        // TODO: What if path points to a directory above the archive? (security)
+
+        // Create parent directories if required.
+        if let Some(parent) = dest.parent() {
+            fs::create_dir_all(parent)?;
+        }
+
+        let metadata = entry.metadata();
+
+        match metadata.entry_type {
+            EntryType::Directory => fs::create_dir_all(dest)?,
+
+            EntryType::File => {
+                // Create the file and stream this entry's bytes into it.
+                let mut file = OpenOptions::new()
+                    .create(true)
+                    .create_new(self.keep_old_files)
+                    .write(true)
+                    .truncate(true)
+                    .open(dest)?;
+
+                io::copy(entry, &mut file)?;
+            }
+            _ => {
+                log::warn!("skipping entry {}, unsupported type", path.display())
+            }
+        }
+
+        Ok(())
     }
 }

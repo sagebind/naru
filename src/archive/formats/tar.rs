@@ -42,7 +42,7 @@ impl fmt::Display for Tar {
 }
 
 impl super::ArchiveFormat for Tar {
-    fn open(&self, input: Input) -> Result<Box<dyn ArchiveReader>> {
+    fn open<'r>(&self, input: Input<'r>) -> Result<Box<dyn ArchiveReader + 'r>> {
         Ok(Box::new(TarReader::new(input)?))
     }
 }

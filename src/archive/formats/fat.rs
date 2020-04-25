@@ -33,7 +33,7 @@ impl fmt::Display for Fat {
 
 impl super::ArchiveFormat for Fat {
     fn open(&self, input: Input) -> Result<Box<dyn ArchiveReader>> {
-        let input: File = input.try_into()
+        let input = input.into_file()
             .map_err(|_| ())
             .expect("only files are supported with fat");
 

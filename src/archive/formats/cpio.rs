@@ -42,7 +42,7 @@ impl fmt::Display for Cpio {
 }
 
 impl super::ArchiveFormat for Cpio {
-    fn open(&self, input: Input) -> Result<Box<dyn ArchiveReader>> {
+    fn open<'r>(&self, input: Input<'r>) -> Result<Box<dyn ArchiveReader + 'r>> {
         Ok(Box::new(CpioReader {
             init: Some(input),
             entry: None,

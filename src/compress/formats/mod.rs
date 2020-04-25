@@ -13,7 +13,7 @@ mod xz;
 mod zlib;
 
 pub trait CompressionFormat: Format {
-    fn new_decoder(&self, reader: Box<dyn Read>) -> Result<Box<dyn Read>> {
+    fn new_decoder<'r>(&self, input: Input<'r>) -> Result<Box<dyn Read + 'r>> {
         unimplemented!()
     }
 

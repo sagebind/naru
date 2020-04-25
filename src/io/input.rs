@@ -12,25 +12,32 @@ use std::{
 /// An input stream that might be seekable and might have a file path.
 ///
 /// This type is used to abstract over multiple kinds of file sources.
-pub struct Input {
-    path: Option<PathBuf>,
-    file: Option<BufReader<File>>,
-    dynamic: Option<BufReader<DiskCacheReader<Box<dyn Read>>>>,
+pub struct Input<'r>(Inner<'r>);
+
+enum Inner<'r> {
+    File(BufReader<File>),
+    Other(BufReader<DiskCacheReader<Box<dyn Read + 'r>>>),
 }
 
-impl Input {
+impl<'r> Input<'r> {
     pub fn open(path: impl AsRef<Path>) -> Result<Self> {
         let path = path.as_ref();
 
         if path.to_str() == Some("-") {
             Self::stdin()
         } else {
-            Ok(Self {
-                path: Some(path.to_owned()),
-                file: Some(BufReader::new(File::open(path)?)),
-                dynamic: None,
-            })
+            Ok(Self::from_file(File::open(path)?))
         }
+    }
+
+    pub fn from_file(file: File) -> Self {
+        Self(Inner::File(BufReader::new(file)))
+    }
+
+    pub fn from_reader(reader: impl Read + 'r) -> Result<Self> {
+        let reader: Box<dyn Read + 'r> = Box::new(reader);
+
+        Ok(Self(Inner::Other(BufReader::new(DiskCacheReader::new(reader)?))))
     }
 
     pub fn stdin() -> Result<Self> {
@@ -38,93 +45,72 @@ impl Input {
 
         // If stdin is actually a seekable file stream, then just use as-is.
         if file.seek(SeekFrom::Start(0)).is_ok() {
-            Ok(Self {
-                path: None,
-                file: Some(BufReader::new(file)),
-                dynamic: None,
-            })
+            Ok(Self::from_file(file))
         }
         // If stdin is a true unseekable stream (like a pipe) then wrap in a
         // caching reader.
         else {
-            Ok(Self {
-                path: None,
-                file: None,
-                dynamic: Some(BufReader::new(DiskCacheReader::new(
-                    Box::new(
-                        BufReader::new(file)
-                    ) as Box<dyn Read>
-                )?)),
-            })
+            Self::from_reader(file)
         }
     }
 
-    pub fn path(&self) -> Option<&Path> {
-        self.path.as_deref()
-    }
+    /// Make this input available as a file on disk. This is used when a reader
+    /// implementation either requires the ability to seek or that the input is
+    /// on disk.
+    pub fn into_file(mut self) -> Result<File> {
+        match self.0 {
+            // Already a file
+            Inner::File(file) => Ok(file.into_inner()),
 
-    pub fn try_wrap<F>(&mut self, f: F) -> Result<()>
-    where
-        F: FnOnce(Box<dyn Read>) -> Result<Box<dyn Read>>,
-    {
-        let inner: Box<dyn Read> = if let Some(file) = self.file.take() {
-            Box::new(file)
-        } else {
-            Box::new(self.dynamic.take().unwrap())
-        };
-
-        self.dynamic = Some(BufReader::new(DiskCacheReader::new(f(inner)?)?));
-
-        Ok(())
-    }
-}
-
-impl TryFrom<Input> for File {
-    type Error = Input;
-
-    fn try_from(input: Input) -> std::result::Result<File, Input> {
-        if let Some(file) = input.file {
-            Ok(file.into_inner())
-        } else {
-            Err(input)
+            // Allocate a temporary file and drain the reader into it
+            Inner::Other(mut reader) => {
+                let mut file = tempfile::tempfile()?;
+                io::copy(&mut reader, &mut file)?;
+                file.seek(SeekFrom::Start(0))?;
+                Ok(file)
+            }
         }
     }
 }
 
-impl BufRead for Input {
+impl TryFrom<Input<'_>> for File {
+    type Error = io::Error;
+
+    fn try_from(input: Input<'_>) -> Result<File> {
+        input.into_file()
+    }
+}
+
+impl BufRead for Input<'_> {
     fn fill_buf(&mut self) -> Result<&[u8]> {
-        if let Some(file) = self.file.as_mut() {
-            file.fill_buf()
-        } else {
-            self.dynamic.as_mut().unwrap().fill_buf()
+        match &mut self.0 {
+            Inner::File(file) => file.fill_buf(),
+            Inner::Other(reader) => reader.fill_buf(),
         }
     }
 
     fn consume(&mut self, amt: usize) {
-        if let Some(file) = self.file.as_mut() {
-            file.consume(amt)
-        } else {
-            self.dynamic.as_mut().unwrap().consume(amt)
+        match &mut self.0 {
+            Inner::File(file) => file.consume(amt),
+            Inner::Other(reader) => reader.consume(amt),
         }
     }
 }
 
-impl Read for Input {
+impl Read for Input<'_> {
     fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
-        if let Some(file) = self.file.as_mut() {
-            file.read(buf)
-        } else {
-            self.dynamic.as_mut().unwrap().read(buf)
+        match &mut self.0 {
+            Inner::File(file) => file.read(buf),
+            Inner::Other(reader) => reader.read(buf),
         }
     }
 }
 
-impl Seek for Input {
+impl Seek for Input<'_> {
     fn seek(&mut self, pos: SeekFrom) -> Result<u64> {
-        if let Some(file) = self.file.as_mut() {
-            file.seek(pos)
-        } else {
-            self.dynamic.as_mut().unwrap().seek(pos)
+        match &mut self.0 {
+            Inner::File(file) => file.seek(pos),
+            Inner::Other(reader) => reader.seek(pos),
         }
     }
 }

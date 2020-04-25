@@ -31,7 +31,7 @@ impl fmt::Display for Gzip {
 }
 
 impl super::CompressionFormat for Gzip {
-    fn new_decoder(&self, reader: Box<dyn Read>) -> Result<Box<dyn Read>> {
-        Ok(Box::new(flate2::read::GzDecoder::new(reader)))
+    fn new_decoder<'r>(&self, input: Input<'r>) -> Result<Box<dyn Read + 'r>> {
+        Ok(Box::new(flate2::read::GzDecoder::new(input)))
     }
 }

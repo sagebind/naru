@@ -29,7 +29,7 @@ impl fmt::Display for Xz {
 }
 
 impl super::CompressionFormat for Xz {
-    fn new_decoder(&self, reader: Box<dyn Read>) -> Result<Box<dyn Read>> {
-        Ok(Box::new(xz2::read::XzDecoder::new(reader)))
+    fn new_decoder<'r>(&self, input: Input<'r>) -> Result<Box<dyn Read + 'r>> {
+        Ok(Box::new(xz2::read::XzDecoder::new(input)))
     }
 }
